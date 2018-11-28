@@ -129,9 +129,9 @@ class Unet(nn.Module):
         # Set upconvolution layer 1
         self.conv_up1 = upconv(64, 32)
         # Set upconvolution layer 2
-        self.conv_up1 = upconv(32, 16)
+        self.conv_up2 = upconv(32, 16)
         # Set upconvolution layer 3
-        self.conv_up1 = upconv(16, 8)
+        self.conv_up3 = upconv(16, 8)
         # Set output layer
         self.conv_out = outconv(8, n_classes)
         
@@ -145,8 +145,8 @@ class Unet(nn.Module):
         x3 = self.conv_down3(x2)
         # upstream
         x4 = self.conv_up1(x3)
-        x5 = self.conv_up1(x4)
-        x6 = self.conv_up1(x5)
+        x5 = self.conv_up2(x4)
+        x6 = self.conv_up3(x5)
         # output
         x = self.conv_out(x6)
         return x
