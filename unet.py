@@ -7,7 +7,7 @@ Created on Sun Nov 28 11:33:30 2018
 from __future__ import print_function
 import torch
 import torch.nn as nn
-#import torch.nn.functional as F
+import torch.nn.functional as F
 
 
 class inconv(nn.Module):
@@ -111,6 +111,7 @@ class outconv(nn.Module):
         return x
 
 
+
 class Unet(nn.Module):
     '''
     U-net class
@@ -149,9 +150,9 @@ class Unet(nn.Module):
         x6 = self.conv_up3(x5)
         # output
         x = self.conv_out(x6)
-        return x
+        return  F.sigmoid(x)
 
 # Load Unet
-net = Unet(n_channels=3, n_classes=1)
+net = Unet(n_channels=3, n_classes=2)
 
 print(net)
