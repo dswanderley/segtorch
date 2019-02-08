@@ -6,7 +6,7 @@ Created on Sun Sep 16 19:14:35 2018
 @author: Diego
 """
 
-import torch
+#import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
