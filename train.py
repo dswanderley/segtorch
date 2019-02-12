@@ -10,6 +10,7 @@ import numpy as np
 #import matplotlib.pyplot as plt
 from torch.utils.data import Dataset#, DataLoader
 #from torchvision import transforms, utils
+from unet import Unet
 
 class UltrasoundDataset(Dataset):
     """B-mode ultrasound dataset"""
@@ -77,8 +78,15 @@ def train_net(net, epochs=5, batch_size=1, lr=0.1):
         net.train()
         
 
-OVARY_DATASET = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
+# if __name__ == '__main__':
 
+# Load Dataset
+OVARY_DATASET = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
 print(OVARY_DATASET)
+
+# Load Unet
+NET = Unet(n_channels=3, n_classes=2)
+print(NET)
+
 #train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size,
 #  shuffle=True, num_workers=threads, drop_last=True, pin_memory=True)
