@@ -22,9 +22,6 @@
   <ItemGroup>
     <Compile Include="net.py" />
     <Compile Include="train.py" />
-    <Compile Include="train2.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="unet.py">
       <SubType>Code</SubType>
     </Compile>

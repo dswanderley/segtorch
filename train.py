@@ -73,13 +73,14 @@ def train_net(net, epochs=5, batch_size=1, lr=0.1):
 
     # Load Dataset
     OVARY_DATASET = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
-        
+    train_data = DataLoader(OVARY_DATASET)
+    # dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=threads, drop_last=True, pin_memory=True)
+    
     optimizer = optim.Adam(net.parameters())
 
     criterion = nn.BCELoss()
 
-    train_data = DataLoader(OVARY_DATASET)
-
+    # Run epochs
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
 
@@ -91,9 +92,6 @@ def train_net(net, epochs=5, batch_size=1, lr=0.1):
 
 # Load Unet
 net = Unet(n_channels=3, n_classes=2)
-print(net)
 
 train_net(net)
 
-#train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size,
-#  shuffle=True, num_workers=threads, drop_last=True, pin_memory=True)
