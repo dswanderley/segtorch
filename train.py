@@ -3,7 +3,7 @@ Train network
 """
 
 import os
-#import torch
+import torch
 
 import numpy as np
 import torch.nn as nn
@@ -50,15 +50,21 @@ class UltrasoundDataset(Dataset):
         image = Image.open(im_path)
         gt_im = Image.open(gt_path)
 
+        # Image to array
+        im_np = np.array(image)
+        if (len(im_np.shape) > 2):
+            im_np = im_np[:,:,0]
+
         # Three classes: background (0) / ovary  (127) / follicle (255)
         gt_np = np.array(gt_im)
+        if (len(gt_np.shape) > 2):
+            gt_np = gt_np[:,:,0]
 
-        truth = Image.fromarray(gt_np.astype('uint8'))        
-        
         if self.transform:
-            sample = self.transform(image, truth)
+            im_np, gt_np = self.transform(im_np, gt_np)
+            
+        return im_name, torch.from_numpy(im_np), torch.from_numpy(gt_np)
 
-        return im_name, image, truth
 
 '''
 Transformation parameters
@@ -69,29 +75,32 @@ Transformation parameters
 #shear_range = 0.0
 #im_size = (512,512)
 
-def train_net(net, epochs=5, batch_size=1, lr=0.1):
+def train_net(net, epochs=1, batch_size=1, lr=0.1):
 
     # Load Dataset
     OVARY_DATASET = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
-    train_data = DataLoader(OVARY_DATASET)
+    train_data = DataLoader(OVARY_DATASET, batch_size=4, shuffle=True)
     # dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=threads, drop_last=True, pin_memory=True)
     
-    optimizer = optim.Adam(net.parameters())
+    #optimizer = optim.Adam(net.parameters())
 
-    criterion = nn.BCELoss()
+    #criterion = nn.BCELoss()
 
     # Run epochs
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
 
-        net.train()
-        aux=enumerate(train_data)
+        for batch_idx, (im_name, image, truth) in enumerate(train_data):
 
+            #print(batch_idx)
+            print(im_name)
+            print(image.size())
+            print(truth.size())
+
+        #net.train()
         
 
-        print(aux)
-
-        
+               
 
         #for batch_idx in enumerate(train_data):
          #   print(batch_idx)
