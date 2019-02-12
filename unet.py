@@ -152,7 +152,3 @@ class Unet(nn.Module):
         x = self.conv_out(x6)
         return  F.sigmoid(x)
 
-# Load Unet
-net = Unet(n_channels=3, n_classes=2)
-
-print(net)
