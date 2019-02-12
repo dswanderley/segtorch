@@ -1,13 +1,12 @@
 """
-high level support for doing this and that.
+Train network
 """
-#from __future__ import print_function, division
+
 import os
 #import torch
-#import pandas as pd
-from skimage import io
+from PIL import Image
 #,transform
-#import numpy as np
+import numpy as np
 #import matplotlib.pyplot as plt
 from torch.utils.data import Dataset#, DataLoader
 #from torchvision import transforms, utils
@@ -28,24 +27,55 @@ class UltrasoundDataset(Dataset):
         self.images_name = os.listdir(self.im_dir)
 
     def __len__(self):
+        """
+        @
+        """
         return len(self.images_name)
 
     def __getitem__(self, idx):
-
+        """
+        @
+        """
         im_name = self.images_name[idx]
 
-        im_path = os.path.join(self.im_dir, im_name)
-        gt_path = os.path.join(self.gt_dir, im_name)
+        im_path = os.path.join(self.im_dir, im_name)    # PIL image in [0,255], 3 channels
+        gt_path = os.path.join(self.gt_dir, im_name)    # PIL image in [0,255], 3 channels
+                
+        image = Image.open(im_path)
+        gt_im = Image.open(gt_path)
 
-        image = io.imread(im_path)
-        truth = io.imread(gt_path)
+        # Three classes: background (0) / ovary  (127) / follicle (255)
+        gt_np = np.array(gt_im)
 
-        sample = {'image': image, 'truth': truth}
-
+        truth = Image.fromarray(gt_indexes.astype('uint8'))        
+        
         if self.transform:
-            sample = self.transform(sample)
+            sample = self.transform(image, truth)
 
-        return sample
+        return im_name, image, truth
+
+'''
+Transformation parameters
+'''
+#rotate_range = 25
+#translate_range = (10.0, 10.0)
+#scale_range = (0.90, 1.50)
+#shear_range = 0.0
+#im_size = (512,512)
+
+def train_net(net, epochs=5, batch_size=1, lr=0.1):
+    
+    optimizer = optim.Adam(net.parameters())
+
+    criterion = nn.BCELoss()
+
+    train_data = DataLoader()
+
+    for epoch in range(epochs):
+        print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
+
+        net.train()
+        
 
 OVARY_DATASET = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
 
