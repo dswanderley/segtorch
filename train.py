@@ -4,11 +4,16 @@ Train network
 
 import os
 #import torch
-from PIL import Image
-#,transform
+
 import numpy as np
+import torch.nn as nn
 #import matplotlib.pyplot as plt
-from torch.utils.data import Dataset#, DataLoader
+
+from torch import optim
+from PIL import Image #,transform
+
+from torch.utils.data import Dataset, DataLoader
+
 #from torchvision import transforms, utils
 from unet import Unet
 
@@ -65,12 +70,15 @@ Transformation parameters
 #im_size = (512,512)
 
 def train_net(net, epochs=5, batch_size=1, lr=0.1):
-    
+
+    # Load Dataset
+    OVARY_DATASET = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
+        
     optimizer = optim.Adam(net.parameters())
 
     criterion = nn.BCELoss()
 
-    train_data = DataLoader()
+    train_data = DataLoader(OVARY_DATASET)
 
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
@@ -80,13 +88,12 @@ def train_net(net, epochs=5, batch_size=1, lr=0.1):
 
 # if __name__ == '__main__':
 
-# Load Dataset
-OVARY_DATASET = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
-print(OVARY_DATASET)
 
 # Load Unet
-NET = Unet(n_channels=3, n_classes=2)
-print(NET)
+net = Unet(n_channels=3, n_classes=2)
+print(net)
+
+train_net(net)
 
 #train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size,
 #  shuffle=True, num_workers=threads, drop_last=True, pin_memory=True)
