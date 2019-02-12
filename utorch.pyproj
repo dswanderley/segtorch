@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{87e324df-3010-4c36-b9d8-a41db46b4973}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>unet.py</StartupFile>
+    <StartupFile>train.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -20,6 +20,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="net.py" />
+    <Compile Include="train.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="unet.py">
       <SubType>Code</SubType>
     </Compile>
