@@ -53,7 +53,7 @@ class UltrasoundDataset(Dataset):
         # Three classes: background (0) / ovary  (127) / follicle (255)
         gt_np = np.array(gt_im)
 
-        truth = Image.fromarray(gt_indexes.astype('uint8'))        
+        truth = Image.fromarray(gt_np.astype('uint8'))        
         
         if self.transform:
             sample = self.transform(image, truth)
@@ -85,6 +85,19 @@ def train_net(net, epochs=5, batch_size=1, lr=0.1):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
 
         net.train()
+        aux=enumerate(train_data)
+
+        
+
+        print(aux)
+
+        
+
+        #for batch_idx in enumerate(train_data):
+         #   print(batch_idx)
+            #output = net(data)
+
+        
         
 
 # if __name__ == '__main__':
