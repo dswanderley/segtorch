@@ -19,7 +19,7 @@ class inconv(nn.Module):
         super(inconv, self).__init__()
         # Set conv layer
         self.conv = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 3, stride=2, padding=1),
+            nn.Conv2d(in_ch, out_ch, 3, stride=1, padding=1),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True)
         )
@@ -81,14 +81,16 @@ class upconv(nn.Module):
         if bilinear:
             self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         else:
-            self.up = nn.ConvTranspose2d(in_ch, in_ch, 2, stride=2)
+            self.up = nn.ConvTranspose2d(in_ch, out_ch, 2, stride=2)
         # Set conv layer
         self.conv = fwdconv(in_ch, out_ch)
         
     def forward(self, x, x_res):
         ''' Foward method '''
-        x = torch.cat((x, x_res), 1)
-        return x
+        x_up = self.up(x)
+        x_cat = torch.cat((x_up, x_res), 1)
+        x_conv = self.conv(x_cat)
+        return x_conv
 
 
 class outconv(nn.Module):
@@ -145,9 +147,9 @@ class Unet(nn.Module):
         x2 = self.conv_down2(x1)
         x3 = self.conv_down3(x2)
         # upstream
-        x4 = self.conv_up1(x3)
-        x5 = self.conv_up2(x4)
-        x6 = self.conv_up3(x5)
+        x4 = self.conv_up1(x3, x2)
+        x5 = self.conv_up2(x4, x1)
+        x6 = self.conv_up3(x5, x0)
         # output
         x = self.conv_out(x6)
         return  F.sigmoid(x)
