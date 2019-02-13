@@ -20,7 +20,6 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="net.py" />
     <Compile Include="train.py" />
     <Compile Include="unet.py">
       <SubType>Code</SubType>

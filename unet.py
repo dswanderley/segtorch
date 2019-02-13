@@ -139,7 +139,7 @@ class Unet(nn.Module):
     def forward(self, x):
         ''' Foward method '''
         # input
-        x0 = self.init_conv(x)
+        x0 = self.conv_init(x)
         # downstream
         x1 = self.conv_down1(x0)
         x2 = self.conv_down2(x1)
