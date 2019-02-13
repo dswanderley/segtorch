@@ -51,12 +51,12 @@ class UltrasoundDataset(Dataset):
         gt_im = Image.open(gt_path)
 
         # Image to array
-        im_np = np.array(image)
+        im_np = np.array(image).astype(np.float32)
         if (len(im_np.shape) > 2):
             im_np = im_np[:,:,0]
 
         # Three classes: background (0) / ovary  (127) / follicle (255)
-        gt_np = np.array(gt_im)
+        gt_np = np.array(gt_im).astype(np.float32)
         if (len(gt_np.shape) > 2):
             gt_np = gt_np[:,:,0]
 
@@ -79,12 +79,12 @@ def train_net(net, epochs=1, batch_size=1, lr=0.1):
 
     # Load Dataset
     OVARY_DATASET = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
-    train_data = DataLoader(OVARY_DATASET, batch_size=4, shuffle=True)
+    train_data = DataLoader(OVARY_DATASET, batch_size=1, shuffle=True)
     # dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=threads, drop_last=True, pin_memory=True)
     
-    #optimizer = optim.Adam(net.parameters())
+    optimizer = optim.Adam(net.parameters())
 
-    #criterion = nn.BCELoss()
+    criterion = nn.BCELoss()
 
     # Run epochs
     for epoch in range(epochs):
@@ -92,13 +92,19 @@ def train_net(net, epochs=1, batch_size=1, lr=0.1):
 
         for batch_idx, (im_name, image, truth) in enumerate(train_data):
 
-            #print(batch_idx)
-            print(im_name)
-            print(image.size())
-            print(truth.size())
+            net.train()
 
-        #net.train()
+            image.unsqueeze_(0)
+            masks_pred = net(image)
+            masks_probs_flat = masks_pred.view(-1)
+
+            #true_masks_flat = true_masks.view(-1)
+
+            #loss = criterion(masks_probs_flat, true_masks_flat)
+
+            #print('{0:.4f} --- loss: {1:.6f}'.format(i * batch_size / N_train, loss.item()))
         
+            #loss.backward()
 
                
 
@@ -113,7 +119,7 @@ def train_net(net, epochs=1, batch_size=1, lr=0.1):
 
 
 # Load Unet
-net = Unet(n_channels=3, n_classes=2)
-
+net = Unet(n_channels=1, n_classes=3)
+print(net)
 train_net(net)
 
