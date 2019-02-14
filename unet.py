@@ -102,7 +102,7 @@ class outconv(nn.Module):
         super(outconv, self).__init__()
         # Set conv layer
         self.conv = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 1, stride=1, padding=1),
+            nn.Conv2d(in_ch, out_ch, 1, stride=1, padding=0),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True)
         )
