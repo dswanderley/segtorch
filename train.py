@@ -54,6 +54,7 @@ class UltrasoundDataset(Dataset):
         im_np = np.array(image).astype(np.float32)
         if (len(im_np.shape) > 2):
             im_np = im_np[:,:,0]
+        #im_np =  np.reshape(im_np, (1, im_np.shape[0], im_np.shape[1])).astype(np.float32)
 
         # Grouth truth to array
         gt_np = np.array(gt_im).astype(np.float32)
@@ -117,7 +118,7 @@ def train_net(net, epochs=1, batch_size=1, lr=0.1):
 
             net.train()
 
-            image.unsqueeze_(0)
+            image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
             masks_pred = net(image)
             masks_probs_flat = masks_pred.view(-1)
 
