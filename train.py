@@ -55,10 +55,31 @@ class UltrasoundDataset(Dataset):
         if (len(im_np.shape) > 2):
             im_np = im_np[:,:,0]
 
-        # Three classes: background (0) / ovary  (127) / follicle (255)
+        # Grouth truth to array
         gt_np = np.array(gt_im).astype(np.float32)
         if (len(gt_np.shape) > 2):
             gt_np = gt_np[:,:,0]
+            
+        # Three classes: background (0) / ovary  (128) / follicle (255)
+        t1 = 128./2.
+        t2 = 255. - t1
+        mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 3))
+        # Background mask
+        aux_b = mask[:,:,0]
+        aux_b[gt_np < t1] = 255.
+        mask[...,0] = aux_b
+        # Ovary mask
+        aux_o = mask[:,:,1]
+        aux_o[(gt_np >= t1) & (gt_np <= t2)] = 255.
+        mask[...,1] = aux_o
+        # Follicle mask
+        aux_f = mask[:,:,2]
+        aux_f[gt_np > t2] = 255.
+        mask[...,2] = aux_f
+        
+        gt_np = mask / 255.
+        gt_np =  np.reshape(gt_np, (gt_np.shape[2], gt_np.shape[0], gt_np.shape[1])).astype(np.float32)
+
 
         if self.transform:
             im_np, gt_np = self.transform(im_np, gt_np)
@@ -78,8 +99,10 @@ Transformation parameters
 def train_net(net, epochs=1, batch_size=1, lr=0.1):
 
     # Load Dataset
-    OVARY_DATASET = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
-    train_data = DataLoader(OVARY_DATASET, batch_size=1, shuffle=True)
+    ovary_dataset = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
+    data_len = len(ovary_dataset)
+
+    train_data = DataLoader(ovary_dataset, batch_size=batch_size, shuffle=True)
     # dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=threads, drop_last=True, pin_memory=True)
     
     optimizer = optim.Adam(net.parameters())
@@ -98,11 +121,11 @@ def train_net(net, epochs=1, batch_size=1, lr=0.1):
             masks_pred = net(image)
             masks_probs_flat = masks_pred.view(-1)
 
-            #true_masks_flat = true_masks.view(-1)
+            true_masks_flat = truth.view(-1)
+            
+            loss = criterion(masks_probs_flat, true_masks_flat)
 
-            #loss = criterion(masks_probs_flat, true_masks_flat)
-
-            #print('{0:.4f} --- loss: {1:.6f}'.format(i * batch_size / N_train, loss.item()))
+            print('{0:.4f} --- loss: {1:.6f}'.format(batch_idx * batch_size / data_len, loss.item()))
         
             #loss.backward()
 
