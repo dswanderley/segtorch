@@ -4,6 +4,7 @@ Train network
 
 import os
 import torch
+import torchvision
 
 import numpy as np
 import torch.nn as nn
@@ -54,7 +55,6 @@ class UltrasoundDataset(Dataset):
         im_np = np.array(image).astype(np.float32)
         if (len(im_np.shape) > 2):
             im_np = im_np[:,:,0]
-        #im_np =  np.reshape(im_np, (1, im_np.shape[0], im_np.shape[1])).astype(np.float32)
 
         # Grouth truth to array
         gt_np = np.array(gt_im).astype(np.float32)
@@ -78,9 +78,14 @@ class UltrasoundDataset(Dataset):
         aux_f[gt_np > t2] = 255.
         mask[...,2] = aux_f
         
-        gt_np = mask / 255.
-        gt_np =  np.reshape(gt_np, (gt_np.shape[2], gt_np.shape[0], gt_np.shape[1])).astype(np.float32)
-
+        mask = gt_np
+        
+        Image.fromarray(mask.astype(np.uint8)).save("gt.png")
+        
+        # Convert to float and reshape to the tensor shape
+        gt_np = (mask / 255.).astype(np.float32)
+        #gt_np =  np.reshape(gt_np, (gt_np.shape[2], gt_np.shape[0], gt_np.shape[1]))
+               
 
         if self.transform:
             im_np, gt_np = self.transform(im_np, gt_np)
@@ -97,7 +102,8 @@ Transformation parameters
 #shear_range = 0.0
 #im_size = (512,512)
 
-def train_net(net, epochs=1, batch_size=1, lr=0.1):
+
+def train_net(net, epochs=30, batch_size=3, lr=0.1):
 
     # Load Dataset
     ovary_dataset = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
@@ -106,9 +112,9 @@ def train_net(net, epochs=1, batch_size=1, lr=0.1):
     train_data = DataLoader(ovary_dataset, batch_size=batch_size, shuffle=True)
     # dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=threads, drop_last=True, pin_memory=True)
     
+    # Define parameters
     optimizer = optim.Adam(net.parameters())
-
-    criterion = nn.BCELoss()
+    criterion = nn.CrossEntropyLoss()
 
     # Run epochs
     for epoch in range(epochs):
@@ -116,28 +122,56 @@ def train_net(net, epochs=1, batch_size=1, lr=0.1):
 
         for batch_idx, (im_name, image, truth) in enumerate(train_data):
 
+            # Active train
             net.train()
 
+            # Run prediction
             image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
-            masks_pred = net(image)
-            masks_probs_flat = masks_pred.view(-1)
+            pred_masks = net(image)
 
+            # Reshape data to the same space
+            pred_masks_flat = pred_masks.view(-1)
             true_masks_flat = truth.view(-1)
             
-            loss = criterion(masks_probs_flat, true_masks_flat)
+
+            test = pred_masks#[0,2,...]
+            torchvision.utils.save_image(test, "results.png")
+
+            #preds = pred_masks
+            #labels = torch.empty(3, 512, 512, dtype=torch.long).random_(3)
+
+
+            #labels_test = truth.numpy()
+            #label_test = labels_test[0]
+            #label_test =  255*np.reshape(label_test, (label_test.shape[1], label_test.shape[2], label_test.shape[0])).astype(np.uint8)
+            #Image.fromarray(label_test).save("gt_loop.png")
+
+            torchvision.utils.save_image(truth, "labels.png")
+
+            # Calculate loss for each batch
+            #loss = criterion(pred_masks_flat, true_masks_flat)
+            loss = criterion(pred_masks, truth.long())
 
             print('{0:.4f} --- loss: {1:.6f}'.format(batch_idx * batch_size / data_len, loss.item()))
-        
-            #loss.backward()
+            
+            # Update weights
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step() 
 
-               
+            # To evaluate on validation set
+            # XXXXXXXXXXXXXXXXXXXXX
+            # call train()
+            # epoch of training on the training set
+            # call eval()
+            # evaluate your model on the validation set
+            # repeat
+            # XXXXXXXXXXXXXXXXXXXXX
 
-        #for batch_idx in enumerate(train_data):
-         #   print(batch_idx)
-            #output = net(data)
+            # Save weights
 
-        
-        
+
+
 
 # if __name__ == '__main__':
 
