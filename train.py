@@ -105,7 +105,39 @@ Transformation parameters
 #im_size = (512,512)
 
 
+def dice_loss(prediction, groundtruth):
+    '''
+    Dice Loss (Ignore background - channel 0)
+    
+    Arguments:
+        @param prediction: tensor with predictions classes
+        @param groundtruth: tensor with ground truth mask
+    '''
+
+    smooth = 0.1
+
+    # Ignorne background
+    prediction = prediction[:,1:,...].contiguous()
+    groundtruth = groundtruth[:,1:,...].contiguous()
+
+    iflat = prediction.view(-1)
+    tflat = groundtruth.view(-1)
+    intersection = (iflat * tflat).sum()
+    
+    return 1 - ((2. * intersection + smooth) /
+              (iflat.sum() + tflat.sum() + smooth))
+
+
 def train_net(net, epochs=30, batch_size=3, lr=0.1):
+    '''
+    Train network function
+
+    Arguments:
+        @param net: network model
+        @param epochs: number of training epochs (int)
+        @param batch_size: batch size (int)
+        @param lr: learning rate
+    '''
 
     # Load Dataset
     ovary_dataset = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
@@ -116,7 +148,7 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
     
     # Define parameters
     optimizer = optim.Adam(net.parameters())
-    criterion = nn.CrossEntropyLoss()
+    criterion = dice_loss # nn.CrossEntropyLoss()
 
     # Run epochs
     for epoch in range(epochs):
@@ -126,24 +158,21 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
 
             # Active train
             net.train()
-
-            if type(criterion) is type(nn.CrossEntropyLoss()):
-                groundtruth = gray_mask
-            else:
-                groundtruth = multi_mask
-
+            
             # Run prediction
             image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
             pred_masks = net(image)
             # Print output
             torchvision.utils.save_image(pred_masks[0,...], "results.png")
 
-            # Reshape data to the same space
-            #pred_masks_flat = pred_masks.view(-1)
-            #true_masks_flat = truth.view(-1)
-            
+            # Handle with ground truth
+            if type(criterion) is type(nn.CrossEntropyLoss()):
+                groundtruth = gray_mask.long()
+            else:
+                groundtruth = multi_mask
+
             # Calculate loss for each batch
-            loss = criterion(pred_masks, groundtruth.long())
+            loss = criterion(pred_masks, groundtruth)
             print('{0:.4f} --- loss: {1:.6f}'.format(batch_idx * batch_size / data_len, loss.item()))
             
             # Update weights
