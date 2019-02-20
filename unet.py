@@ -107,9 +107,12 @@ class outconv(nn.Module):
             nn.ReLU(inplace=True)
         )
 
+        self.softmax = nn.Softmax2d()
+
     def forward(self, x):
         ''' Foward method '''
         x = self.conv(x)
+        x = self.softmax(x)
         return x
 
 
@@ -152,5 +155,5 @@ class Unet(nn.Module):
         x6 = self.conv_up3(x5, x0)
         # output
         x = self.conv_out(x6)
-        return  F.sigmoid(x)
+        return x
 
