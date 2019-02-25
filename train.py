@@ -17,6 +17,7 @@ from torch.utils.data import Dataset, DataLoader
 
 #from torchvision import transforms, utils
 from unet import Unet
+#from dice import dice_loss
 
 class UltrasoundDataset(Dataset):
     """B-mode ultrasound dataset"""
@@ -105,7 +106,8 @@ Transformation parameters
 #im_size = (512,512)
 
 
-def dice_loss(prediction, groundtruth):
+#LOSS FUNCTION
+class DiceLoss (nn.Module):
     '''
     Dice Loss (Ignore background - channel 0)
     
@@ -114,18 +116,26 @@ def dice_loss(prediction, groundtruth):
         @param groundtruth: tensor with ground truth mask
     '''
 
-    smooth = 0.1
+    def __init__(self):
+        super(DiceLoss, self).__init__()
 
-    # Ignorne background
-    prediction = prediction[:,1:,...].contiguous()
-    groundtruth = groundtruth[:,1:,...].contiguous()
+    def forward (self, pred, gt):
 
-    iflat = prediction.view(-1)
-    tflat = groundtruth.view(-1)
-    intersection = (iflat * tflat).sum()
-    
-    return 1 - ((2. * intersection + smooth) /
-              (iflat.sum() + tflat.sum() + smooth))
+        SMOOTH = 0.0001
+
+        # Ignorne background
+        prediction = pred[:,1:,...].contiguous()
+        groundtruth = gt[:,1:,...].contiguous()
+
+        iflat = prediction.view(-1)
+        tflat = groundtruth.view(-1)
+
+        intersection = (iflat * tflat).sum()
+        union = iflat.sum() + tflat.sum()
+        dsc = ((2. * intersection + SMOOTH) / (union + SMOOTH))
+
+        loss_dsc = 1. - dsc
+        return loss_dsc
 
 
 def saveweights(state):
@@ -139,8 +149,6 @@ def saveweights(state):
     filename = path + 'weights.pth.tar'
     
     torch.save(state, filename)
-
-
 
 
 def train_net(net, epochs=30, batch_size=3, lr=0.1):
@@ -162,8 +170,8 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
     # dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=threads, drop_last=True, pin_memory=True)
     
     # Define parameters
-    optimizer = optim.Adam(net.parameters())
-    criterion = dice_loss # nn.CrossEntropyLoss()
+    optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005) #optim.Adam(net.parameters())
+    criterion =  DiceLoss() # nn.CrossEntropyLoss()
     best_loss = 1000    # Init best loss with a too high value
 
     # Run epochs
@@ -198,8 +206,9 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
 
             # Calculate loss for each batch
             loss = criterion(pred_masks, groundtruth)
+            #loss = criterion(pred_masks[-1,...], groundtruth[-1,...])
             loss_train_sum += len(image) * loss.item()
-            
+
             # Update weights
             optimizer.zero_grad()
             loss.backward()
