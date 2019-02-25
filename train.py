@@ -128,6 +128,21 @@ def dice_loss(prediction, groundtruth):
               (iflat.sum() + tflat.sum() + smooth))
 
 
+def saveweights(state):
+    '''
+    Save network weights.
+
+    Arguments:
+    @state: parameters of the network
+    '''
+    path = ''
+    filename = path + 'weights.pth.tar'
+    
+    torch.save(state, filename)
+
+
+
+
 def train_net(net, epochs=30, batch_size=3, lr=0.1):
     '''
     Train network function
@@ -149,6 +164,7 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
     # Define parameters
     optimizer = optim.Adam(net.parameters())
     criterion = dice_loss # nn.CrossEntropyLoss()
+    best_loss = 1000    # Init best loss with a too high value
 
     # Run epochs
     for epoch in range(epochs):
@@ -156,6 +172,8 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
 
         # Active train
         net.train()
+        # Init loss count
+        loss_train_sum = 0
         
         for batch_idx, (im_name, image, gray_mask, multi_mask) in enumerate(train_data):
 
@@ -180,24 +198,37 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
 
             # Calculate loss for each batch
             loss = criterion(pred_masks, groundtruth)
-            print('{0:.4f} --- loss: {1:.6f}'.format(batch_idx * batch_size / data_len, loss.item()))
+            loss_train_sum += len(image) * loss.item()
             
             # Update weights
             optimizer.zero_grad()
             loss.backward()
-            optimizer.step() 
+            optimizer.step()           
 
-            # To evaluate on validation set
-            # XXXXXXXXXXXXXXXXXXXXX
-            # call train()
-            # epoch of training on the training set
-            # call eval()
-            # evaluate your model on the validation set
-            # repeat
-            # XXXXXXXXXXXXXXXXXXXXX
+        # Calculate average loss per epoch
+        avg_loss_train = loss_train_sum / data_len
+        print('loss: {:f}'.format(avg_loss_train))
+        
+        # To evaluate on validation set
+        # XXXXXXXXXXXXXXXXXXXXX
+        # call train()
+        # epoch of training on the training set
+        # call eval()
+        # evaluate your model on the validation set
+        # repeat
+        # XXXXXXXXXXXXXXXXXXXXX
 
-            # Save weights
+        # Save weights
+        if best_loss > avg_loss_train:
+            best_loss = avg_loss_train
 
+            saveweights({
+                        'epoch': epoch,
+                        'arch': 'unet',
+                        'state_dict': net.state_dict(),
+                        'best_loss': best_loss,
+                        'optimizer': optimizer.state_dict()
+                        })
 
 
 
