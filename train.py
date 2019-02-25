@@ -154,10 +154,17 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
 
+        # Active train
+        net.train()
+        
         for batch_idx, (im_name, image, gray_mask, multi_mask) in enumerate(train_data):
 
-            # Active train
-            net.train()
+            # Active GPU train
+            if torch.cuda.is_available():
+                net = net.to(device)
+                image = image.to(device)
+                gray_mask = gray_mask.to(device)
+                multi_mask = multi_mask.to(device)
             
             # Run prediction
             image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
@@ -200,5 +207,9 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
 # Load Unet
 net = Unet(n_channels=1, n_classes=3)
 print(net)
+
+# Load CUDA if exist
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 train_net(net)
 
