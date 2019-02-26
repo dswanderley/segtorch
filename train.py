@@ -53,7 +53,7 @@ class UltrasoundDataset(Dataset):
         gt_im = Image.open(gt_path)
 
         # Image to array
-        im_np = np.array(image).astype(np.float32)
+        im_np = np.array(image).astype(np.float32) / 255.
         if (len(im_np.shape) > 2):
             im_np = im_np[:,:,0]
 
@@ -81,13 +81,14 @@ class UltrasoundDataset(Dataset):
         aux_f = multi_mask[:,:,2]
         aux_f[gt_np > t2] = 255.
         multi_mask[...,2] = aux_f
-        # Convert to float and reshape to the tensor shape
+        # Convert to float
         multi_mask = (multi_mask / 255.).astype(np.float32)
-        multi_mask =  np.reshape(multi_mask, (multi_mask.shape[2], multi_mask.shape[0], multi_mask.shape[1]))
-        
+                
         # Print data if necessary
         #Image.fromarray(gray_mask.astype(np.uint8)).save("gt.png")      
-        
+        #toprint = Image.fromarray(mask_rgb.astype(np.uint8))
+        #toprint.save("multi_mask.png")
+
         # Apply transformations
         if self.transform:
             im_np, gray_mask, multi_mask = self.transform(im_np, gray_mask, multi_mask)
@@ -122,6 +123,15 @@ class DiceLoss (nn.Module):
     def forward (self, pred, gt):
 
         SMOOTH = 0.0001
+
+
+        #torchvision.utils.save_image(gt[0,0,...], "gt_bkg.png")
+        #torchvision.utils.save_image(gt[0,1,...], "gt_ov.png")
+        #torchvision.utils.save_image(gt[0,2,...], "gt_fol.png")
+        
+        #torchvision.utils.save_image(pred[0,0,...], "results_bkg.png")
+        #torchvision.utils.save_image(pred[0,1,...], "results_ov.png")
+        #torchvision.utils.save_image(pred[0,2,...], "results_fol.png")
 
         # Ignorne background
         prediction = pred[:,1:,...].contiguous()
@@ -184,7 +194,7 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
         loss_train_sum = 0
         
         for batch_idx, (im_name, image, gray_mask, multi_mask) in enumerate(train_data):
-
+            
             # Active GPU train
             if torch.cuda.is_available():
                 net = net.to(device)
@@ -192,18 +202,23 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
                 gray_mask = gray_mask.to(device)
                 multi_mask = multi_mask.to(device)
             
-            # Run prediction
-            image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
-            pred_masks = net(image)
-            # Print output
-            torchvision.utils.save_image(pred_masks[0,...], "results.png")
-
             # Handle with ground truth
             if type(criterion) is type(nn.CrossEntropyLoss()):
                 groundtruth = gray_mask.long()
             else:
+                multi_mask = multi_mask.permute(0, 3, 1, 2).contiguous()
                 groundtruth = multi_mask
 
+            # Run prediction
+            image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
+            pred_masks = net(image)
+
+            # Print output preview
+            if batch_idx == len(train_data):
+                torchvision.utils.save_image(image[0,...], "input.png")
+                torchvision.utils.save_image(groundtruth[0,...], "groundtruth.png")
+                torchvision.utils.save_image(pred_masks[0,...], "output.png")
+            
             # Calculate loss for each batch
             loss = criterion(pred_masks, groundtruth)
             #loss = criterion(pred_masks[-1,...], groundtruth[-1,...])
