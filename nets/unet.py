@@ -3,7 +3,10 @@
 Created on Sun Nov 28 11:33:30 2018
 
 @author: Diego Wanderley
+@python: 3.6
+@description: U-net modules and network
 """
+
 from __future__ import print_function
 import torch
 import torch.nn as nn
@@ -29,7 +32,6 @@ class inconv(nn.Module):
         x = self.conv(x)
         return x
 
-
 class fwdconv(nn.Module):
     '''
     Foward convolution layer
@@ -49,7 +51,6 @@ class fwdconv(nn.Module):
         x = self.conv(x)
         return x
 
-
 class downconv(nn.Module):
     '''
     Downconvolution layer
@@ -68,7 +69,6 @@ class downconv(nn.Module):
         ''' Foward method '''
         x = self.conv(x)
         return x
-
 
 class upconv(nn.Module):
     '''
@@ -92,7 +92,6 @@ class upconv(nn.Module):
         x_conv = self.conv(x_cat)
         return x_conv
 
-
 class outconv(nn.Module):
     '''
     Output convolution layer
@@ -114,8 +113,6 @@ class outconv(nn.Module):
         x = self.conv(x)
         x = self.softmax(x)
         return x
-
-
 
 class Unet(nn.Module):
     '''

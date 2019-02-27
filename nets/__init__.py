@@ -1,0 +1,7 @@
+__author__ = "Diego Wanderley"
+__copyright__ = "Copyright 2019, Universidade do Porto"
+__license__ = "GPL"
+__version__ = "0.1"
+__maintainer__ = "Diego Wanderley"
+__email__ = "diego.wanderley@fe.up.pt"
+__status__ = "Production"
