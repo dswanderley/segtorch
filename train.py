@@ -59,7 +59,7 @@ class UltrasoundDataset(Dataset):
 
         # Grouth truth to array
         gt_np = np.array(gt_im).astype(np.float32)
-        if (len(gt_np.shape) > 2):
+        if (len(gt_np.shape) > 2): 
             gt_np = gt_np[:,:,0]
 
         # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
@@ -214,7 +214,7 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
             pred_masks = net(image)
 
             # Print output preview
-            if batch_idx == len(train_data):
+            if batch_idx == len(train_data) - 1:
                 torchvision.utils.save_image(image[0,...], "input.png")
                 torchvision.utils.save_image(groundtruth[0,...], "groundtruth.png")
                 torchvision.utils.save_image(pred_masks[0,...], "output.png")
