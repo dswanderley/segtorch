@@ -144,11 +144,11 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
 
 
 # Load Unet
-net = Unet2(n_channels=1, n_classes=3, epochs=500, batch_size=3)
+net = Unet2(n_channels=1, n_classes=3)
 print(net)
 
 # Load CUDA if exist
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-train_net(net)
+train_net(net, epochs=500, batch_size=3)
 
