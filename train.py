@@ -17,7 +17,7 @@ import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader
 
-from nets.unet import Unet
+from nets.unet import Unet2
 from utils.datasets import UltrasoundDataset
 from utils.losses import DiceLoss
 
@@ -45,7 +45,7 @@ def saveweights(state):
     torch.save(state, filename)
 
 
-def train_net(net, epochs=30, batch_size=3, lr=0.1):
+def train_net(net, epochs=100, batch_size=8, lr=0.1):
     '''
     Train network function
 
@@ -144,7 +144,7 @@ def train_net(net, epochs=30, batch_size=3, lr=0.1):
 
 
 # Load Unet
-net = Unet(n_channels=1, n_classes=3)
+net = Unet2(n_channels=1, n_classes=3, epochs=500, batch_size=3)
 print(net)
 
 # Load CUDA if exist
