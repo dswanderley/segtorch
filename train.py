@@ -57,7 +57,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
     '''
 
     # Load Dataset
-    ovary_dataset = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/')
+    ovary_dataset = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/', )
     data_len = len(ovary_dataset)
 
     train_data = DataLoader(ovary_dataset, batch_size=batch_size, shuffle=True)
@@ -77,21 +77,23 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
         # Init loss count
         loss_train_sum = 0
         
-        for batch_idx, (im_name, image, gray_mask, multi_mask) in enumerate(train_data):
+        for batch_idx, (im_name, image, gt_mask, ov_mask, fol_mask) in enumerate(train_data):
+        # for batch_idx, (im_name, image, gray_mask, multi_mask) in enumerate(train_data):
             
             # Active GPU train
             if torch.cuda.is_available():
                 net = net.to(device)
                 image = image.to(device)
-                gray_mask = gray_mask.to(device)
-                multi_mask = multi_mask.to(device)
+                gt_mask = gt_mask.to(device)
+                ov_mask = ov_mask.to(device)
+                fol_mask = fol_mask.to(device)
+            
             
             # Handle with ground truth
-            if type(criterion) is type(nn.CrossEntropyLoss()):
-                groundtruth = gray_mask.long()
+            if len(gt_mask.size()) < 4:
+                groundtruth = gt_mask.long()
             else:
-                multi_mask = multi_mask.permute(0, 3, 1, 2).contiguous()
-                groundtruth = multi_mask
+                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
 
             # Run prediction
             image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
@@ -148,7 +150,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
 
 # Load Unet
 net = Unet2(n_channels=1, n_classes=[3,2])
-print(net)
+# print(net)
 
 # Load CUDA if exist
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

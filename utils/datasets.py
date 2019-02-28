@@ -18,7 +18,7 @@ from PIL import Image #,transform
 class UltrasoundDataset(Dataset):
     """B-mode ultrasound dataset"""
 
-    def __init__(self, im_dir='im', gt_dir='gt', transform=None):
+    def __init__(self, im_dir='im', gt_dir='gt', one_hot=True, transform=None):
         """
         Args:
             root_dir (string): Directory with all the images.
@@ -29,6 +29,7 @@ class UltrasoundDataset(Dataset):
         self.gt_dir = gt_dir
         self.transform = transform
         self.images_name = os.listdir(self.im_dir)
+        self.one_hot = one_hot
 
     def __len__(self):
         """
@@ -40,55 +41,123 @@ class UltrasoundDataset(Dataset):
         """
         @
         """
-        im_name = self.images_name[idx]
 
-        im_path = os.path.join(self.im_dir, im_name)    # PIL image in [0,255], 3 channels
-        gt_path = os.path.join(self.gt_dir, im_name)    # PIL image in [0,255], 3 channels
-                
+        '''
+            Output encoding preparation
+        '''
+        # Output encod accepts two types: one-hot-encoding or gray scale levels
+        # Variable encods contains a list of each data encoding: 1) Full GT mask, 2) Ovary mask, 3) Follicle mask
+        if type(self.one_hot) is list:      # When a list is provided
+            encods = []
+            for i in range(3):
+                if i > len(self.one_hot)-1: # If provided list is lower than expected
+                    encods.append(True)
+                else:
+                    encods.append(self.one_hot[i])
+        elif type(self.one_hot) is bool:    # When a single bool is provided
+            encods = [self.one_hot, self.one_hot, self.one_hot]
+        else:
+            encods = [True, True, True]
+        
+        '''
+            Load images
+        '''
+        # Image names: equal for original image and ground truth image
+        im_name = self.images_name[idx]
+        # Load Original Image (B-Mode)
+        im_path = os.path.join(self.im_dir, im_name)    # PIL image in [0,255], 1 channel
         image = Image.open(im_path)
+        # Load Ground Truth Image Image
+        gt_path = os.path.join(self.gt_dir, im_name)    # PIL image in [0,255], 1 channel
         gt_im = Image.open(gt_path)
 
+        '''
+        Input Image preparation
+        '''
         # Image to array
         im_np = np.array(image).astype(np.float32) / 255.
         if (len(im_np.shape) > 2):
             im_np = im_np[:,:,0]
 
+        '''
+            Main Ground Truth preparation - Gray scale GT and Multi-channels GT
+        '''
         # Grouth truth to array
         gt_np = np.array(gt_im).astype(np.float32)
         if (len(gt_np.shape) > 2): 
             gt_np = gt_np[:,:,0]
-
-        # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
-        gray_mask = (gt_np / 255.).astype(np.float32)
-            
-        # Multi mask - background (R = 1) / ovary (G = 1) / follicle (B = 1) 
+        
+        # Multi mask - background (R = 255) / ovary (G = 255) / follicle (B = 255) 
         t1 = 128./2.
         t2 = 255. - t1
-        multi_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 3))
         # Background mask
-        aux_b = multi_mask[:,:,0]
-        aux_b[gt_np < t1] = 255.
-        multi_mask[...,0] = aux_b
+        mask_bkgound = np.zeros((gt_np.shape[0], gt_np.shape[1]))
+        mask_bkgound[gt_np < t1] = 255.
+        # Stroma mask
+        mask_stroma = np.zeros((gt_np.shape[0], gt_np.shape[1]))
+        mask_stroma[(gt_np >= t1) & (gt_np <= t2)] = 255.
+        
+        # Follicles mask
+        mask_follicle = np.zeros((gt_np.shape[0], gt_np.shape[1]))
+        mask_follicle[gt_np > t2] = 255.
+        
+        # Main mask output
+        if encods[0]:
+            # Multi mask - background (R = 1) / ovary (G = 1) / follicle (B = 1) 
+            multi_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 3))
+            multi_mask[...,0] = mask_bkgound
+            multi_mask[...,1] = mask_stroma
+            multi_mask[...,2] = mask_follicle
+            gt_mask = (multi_mask / 255.).astype(np.float32)
+        else:
+            # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
+            gt_mask = (gt_np / 255.).astype(np.float32)
+
+        '''
+            Ovary Ground Truth preparation
+        '''
         # Ovary mask
-        aux_o = multi_mask[:,:,1]
-        aux_o[(gt_np >= t1) & (gt_np <= t2)] = 255.
-        multi_mask[...,1] = aux_o
-        # Follicle mask
-        aux_f = multi_mask[:,:,2]
-        aux_f[gt_np > t2] = 255.
-        multi_mask[...,2] = aux_f
-        # Convert to float
-        multi_mask = (multi_mask / 255.).astype(np.float32)
-                
+        mask_ovary = np.zeros((gt_np.shape[0], gt_np.shape[1]))
+        mask_stroma[gt_np >= t1] = 255.
+
+        # Ovarian auxiliary mask output
+        if encods[1]:
+            # Multi mask - background (R = 1) / ovary (G = 1)
+            ov_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 2))
+            ov_mask[...,0] = mask_bkgound
+            ov_mask[...,1] = mask_stroma
+            ov_mask = (ov_mask / 255.).astype(np.float32)            
+        else:
+            # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
+            ov_mask = (mask_ovary / 255.).astype(np.float32)
+
+        '''
+            Follicles edge Ground Truth preparation
+        '''
+        mask_edges = mask_follicle
+        # Ovarian auxiliary mask output
+        if encods[2]:
+            # Multi mask - background (R = 1) / follicle (G = 1)
+            mask_fback = np.zeros((gt_np.shape[0], gt_np.shape[1]))
+            mask_fback[gt_np < t2] = 255.
+            # final mask
+            fol_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 2))
+            fol_mask[...,0] = mask_fback
+            fol_mask[...,1] = mask_edges
+            fol_mask = (fol_mask / 255.).astype(np.float32)
+        else:
+            # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
+            fol_mask = (mask_edges / 255.).astype(np.float32)
+                            
         # Print data if necessary
-        #Image.fromarray(gray_mask.astype(np.uint8)).save("gt.png")      
-        #toprint = Image.fromarray(mask_rgb.astype(np.uint8))
-        #toprint.save("multi_mask.png")
+        #Image.fromarray(255*gt_mask.astype(np.uint8)).save("gt_all.png")      
+        #Image.fromarray(255*ov_mask[...,1].astype(np.uint8)).save("gt_ov.png")      
+        #Image.fromarray(255*fol_mask[...,1].astype(np.uint8)).save("gt_fol.png")
 
         # Apply transformations
         if self.transform:
-            im_np, gray_mask, multi_mask = self.transform(im_np, gray_mask, multi_mask)
+            im_np, gt_mask, ov_mask, fol_mask = self.transform(im_np, gt_mask, ov_mask, fol_mask)
         
         # Convert to torch (to be used on DataLoader)
-        return im_name, torch.from_numpy(im_np), torch.from_numpy(gray_mask), torch.from_numpy(multi_mask)
+        return im_name, torch.from_numpy(im_np), torch.from_numpy(gt_mask), torch.from_numpy(ov_mask), torch.from_numpy(fol_mask)
 
