@@ -156,6 +156,7 @@ class UltrasoundDataset(Dataset):
         '''
             Input data: Add CLAHE if necessary
         '''
+        # Check has clahe
         if self.clahe:
             imclahe = np.zeros((im_np.shape[0], im_np.shape[1], 2))
             imclahe[...,0] = im_np
