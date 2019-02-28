@@ -14,14 +14,17 @@ import numpy as np
 
 from torch.utils.data import Dataset
 from PIL import Image #,transform
+from skimage import exposure, filters
 
 class UltrasoundDataset(Dataset):
     """B-mode ultrasound dataset"""
 
-    def __init__(self, im_dir='im', gt_dir='gt', one_hot=True, transform=None):
+    def __init__(self, im_dir='im', gt_dir='gt', one_hot=True, clahe=False, transform=None):
         """
         Args:
-            root_dir (string): Directory with all the images.
+            im_dir (string): Directory with all the images.
+            gt_dir (string): Directory with all the masks, with the same name of the original images.
+            on_hot (bool): Optional output encoding one-hot-encoding or gray levels
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
@@ -30,6 +33,7 @@ class UltrasoundDataset(Dataset):
         self.transform = transform
         self.images_name = os.listdir(self.im_dir)
         self.one_hot = one_hot
+        self.clahe = clahe
 
     def __len__(self):
         """
@@ -72,7 +76,7 @@ class UltrasoundDataset(Dataset):
         gt_im = Image.open(gt_path)
 
         '''
-        Input Image preparation
+            Input Image preparation
         '''
         # Image to array
         im_np = np.array(image).astype(np.float32) / 255.
@@ -149,10 +153,20 @@ class UltrasoundDataset(Dataset):
             # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
             fol_mask = (mask_edges / 255.).astype(np.float32)
                             
+        '''
+            Input data: Add CLAHE if necessary
+        '''
+        if self.clahe:
+            imclahe = np.zeros((im_np.shape[0], im_np.shape[1], 2))
+            imclahe[...,0] = im_np
+            imclahe[...,1] = exposure.equalize_adapthist(im_np, kernel_size=im_np.shape[0]/8, clip_limit=0.02, nbins=256)
+            im_np = imclahe
+
         # Print data if necessary
-        #Image.fromarray(255*gt_mask.astype(np.uint8)).save("gt_all.png")      
-        #Image.fromarray(255*ov_mask[...,1].astype(np.uint8)).save("gt_ov.png")      
-        #Image.fromarray(255*fol_mask[...,1].astype(np.uint8)).save("gt_fol.png")
+        #Image.fromarray((255*imclahe).astype(np.uint8)).save("im_np.png")      
+        #Image.fromarray((255*gt_mask).astype(np.uint8)).save("gt_all.png")      
+        #Image.fromarray((255*ov_mask[...,1]).astype(np.uint8)).save("gt_ov.png")      
+        #Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
 
         # Apply transformations
         if self.transform:
