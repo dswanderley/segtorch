@@ -96,6 +96,9 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
             # Run prediction
             image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
             pred_masks = net(image)
+            # Handle multiples outputs
+            if type(pred_masks) is list:
+                pred_masks = pred_masks[0]
 
             # Print output preview
             if batch_idx == len(train_data) - 1:
@@ -144,7 +147,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
 
 
 # Load Unet
-net = Unet2(n_channels=1, n_classes=3)
+net = Unet2(n_channels=1, n_classes=[3,2])
 print(net)
 
 # Load CUDA if exist

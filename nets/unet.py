@@ -170,6 +170,9 @@ class Unet2(nn.Module):
         ''' Constructor '''
         super(Unet2, self).__init__()
 
+        # Number of classes definition
+        self.n_classes = n_classes
+
         # Set input layer
         self.conv_init  = inconv(n_channels, 8)
 
@@ -200,7 +203,13 @@ class Unet2(nn.Module):
         self.conv_up6 = upconv(64, 8, res_ch=8)
 
         # Set output layer
-        self.conv_out = outconv(8, n_classes)
+        if type(n_classes) is list:
+            self.conv_out = []
+            for n in n_classes:
+                c_out = outconv(8, n)
+                self.conv_out.append(c_out)
+        else:
+            self.conv_out = outconv(8, n_classes)
         
     def forward(self, x):
         ''' Foward method '''
@@ -222,6 +231,13 @@ class Unet2(nn.Module):
         uc_x5 = self.conv_up5(uc_x4, dc_x1)
         uc_x6 = self.conv_up6(uc_x5, c_x0)
         # output
-        x = self.conv_out(uc_x6)
-        return x
+        if type(self.n_classes) is list:
+            x_out = []
+            for c_out in self.conv_out:
+                x = c_out(uc_x6)
+                x_out.append(x)
+        else:
+            x_out = self.conv_out(uc_x6)
+
+        return x_out
 
