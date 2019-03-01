@@ -60,8 +60,8 @@ def saveweights(state):
     Arguments:
     @state (dict): parameters of the network
     '''
-    path = ''
-    filename = path + 'weights.pth.tar'
+    path = './weights/'
+    filename = path + train_name + '_weights.pth.tar'
     
     torch.save(state, filename)
 
