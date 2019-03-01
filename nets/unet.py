@@ -141,17 +141,17 @@ class Unet(nn.Module):
         # Set input layer
         self.conv_init  = inconv(n_channels, 8)
         # Set downconvolution layer 1
-        self.conv_down1 = downconv(8, 16, dropout=0.2)
+        self.conv_down1 = downconv(8, 16)
         # Set downconvolution layer 2
-        self.conv_down2 = downconv(16, 32, dropout=0.2)
+        self.conv_down2 = downconv(16, 32)
         # Set downconvolution layer 3
-        self.conv_down3 = downconv(32, 64, dropout=0.2)
+        self.conv_down3 = downconv(32, 64)
         # Set upconvolution layer 1
-        self.conv_up1 = upconv(64, 32, res_ch=32, dropout=0.2)
+        self.conv_up1 = upconv(64, 32, res_ch=32)
         # Set upconvolution layer 2
-        self.conv_up2 = upconv(32, 16, res_ch=16, dropout=0.2)
+        self.conv_up2 = upconv(32, 16, res_ch=16)
         # Set upconvolution layer 3
-        self.conv_up3 = upconv(16, 8, res_ch=8, dropout=0.2)
+        self.conv_up3 = upconv(16, 8, res_ch=8)
         # Set output layer
         self.conv_out = outconv(8, n_classes)
         
@@ -187,30 +187,30 @@ class Unet2(nn.Module):
         self.conv_init  = inconv(n_channels, 8)
 
         # Set downconvolution layer 1
-        self.conv_down1 = downconv(8, 8)
+        self.conv_down1 = downconv(8, 8, dropout=0.2)
         # Set downconvolution layer 2
-        self.conv_down2 = downconv(8, 16)
+        self.conv_down2 = downconv(8, 16, dropout=0.2)
         # Set downconvolution layer 3
-        self.conv_down3 = downconv(16, 24)
+        self.conv_down3 = downconv(16, 24, dropout=0.2)
         # Set downconvolution layer 4
-        self.conv_down4 = downconv(24, 32)
+        self.conv_down4 = downconv(24, 32, dropout=0.2)
         # Set downconvolution layer 5
-        self.conv_down5 = downconv(32, 40)
+        self.conv_down5 = downconv(32, 40, dropout=0.2)
         # Set downconvolution layer 6
-        self.conv_down6 = downconv(40, 48)
+        self.conv_down6 = downconv(40, 48, dropout=0.2)
 
         # Set upconvolution layer 1
-        self.conv_up1 = upconv(48, 320, res_ch=40)
+        self.conv_up1 = upconv(48, 320, res_ch=40, dropout=0.2)
         # Set upconvolution layer 2
-        self.conv_up2 = upconv(320, 256, res_ch=32)
+        self.conv_up2 = upconv(320, 256, res_ch=32, dropout=0.2)
         # Set upconvolution layer 3
-        self.conv_up3 = upconv(256, 192, res_ch=24)
+        self.conv_up3 = upconv(256, 192, res_ch=24, dropout=0.2)
         # Set upconvolution layer 4
-        self.conv_up4 = upconv(192, 128, res_ch=16)
+        self.conv_up4 = upconv(192, 128, res_ch=16, dropout=0.2)
         # Set upconvolution layer 5
-        self.conv_up5 = upconv(128, 64, res_ch=8)
+        self.conv_up5 = upconv(128, 64, res_ch=8, dropout=0.2)
         # Set upconvolution layer 6
-        self.conv_up6 = upconv(64, 8, res_ch=8)
+        self.conv_up6 = upconv(64, 8, res_ch=8, dropout=0.2)
 
         # Set output layer
         if type(n_classes) is list:
