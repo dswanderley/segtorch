@@ -8,6 +8,7 @@ Created on Wed Fev 08 00:40:00 2019
 """   
 
 import os
+import time
 import torch
 import torchvision
 
@@ -22,7 +23,25 @@ from nets.unet import Unet2
 from utils.datasets import UltrasoundDataset
 from utils.losses import DiceLoss
 
-logger = Logger('./logs')
+
+# Get time to generate output name
+def gettrainname(name):
+    '''
+    Get the train name with the training start full date.
+
+    Arguments:
+    @name (string): network name
+
+    Returns: full_name (string)
+    '''
+    tm = time.gmtime()
+    st_mon = str(tm.tm_mon) if tm.tm_mon > 9 else '0'+str(tm.tm_mon)
+    st_day = str(tm.tm_mday) if tm.tm_mday > 9 else '0'+str(tm.tm_mday)
+    st_hour = str(tm.tm_hour) if tm.tm_hour > 9 else '0'+str(tm.tm_hour)
+    st_min = str(tm.tm_min) if tm.tm_min > 9 else '0'+str(tm.tm_min)           
+    tm_str = str(tm.tm_year) + st_mon + st_day + '_' + st_hour + st_min
+    # log name - eg: both
+    return tm_str + '_' + name
 
 '''
 Transformation parameters
@@ -39,7 +58,7 @@ def saveweights(state):
     Save network weights.
 
     Arguments:
-    @state: parameters of the network
+    @state (dict): parameters of the network
     '''
     path = ''
     filename = path + 'weights.pth.tar'
@@ -223,6 +242,11 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
 
 # if __name__ == '__main__':
 
+# Define training name
+train_name = gettrainname('Unet2')
+
+# Set logs folder
+logger = Logger('./logs/' + train_name + '/')
 
 # Load Unet
 net = Unet2(n_channels=1, n_classes=[3,2])
@@ -231,5 +255,6 @@ net = Unet2(n_channels=1, n_classes=[3,2])
 # Load CUDA if exist
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+# Run training
 train_net(net, epochs=500, batch_size=3)
 
