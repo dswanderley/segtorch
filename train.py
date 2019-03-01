@@ -213,9 +213,9 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
 
         # 3. Log training images (image summary)
         info = {'image_train': ref_image_train.cpu().numpy(),
-                'predi_train': ref_pred_train.cpu().numpy(),
+                'predi_train': ref_pred_train.cpu().detach().numpy(),
                 'image_valid': ref_image_val.cpu().numpy(),
-                'predi_valid': ref_pred_val.cpu().numpy()
+                'predi_valid': ref_pred_val.cpu().detach().numpy()
                }
         for tag, im in info.items():
             logger.image_summary(tag, im, epoch+1)
