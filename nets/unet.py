@@ -17,16 +17,18 @@ class inconv(nn.Module):
     '''
     Input layer
     '''
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, batch_norm=True, dropout=0):
         ''' Constructor '''
         super(inconv, self).__init__()
         # Set conv layer
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 3, stride=1, padding=1),
-            nn.BatchNorm2d(out_ch),
-            nn.ReLU(inplace=True)
-        )
-
+        self.conv = nn.Sequential()
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, 3, stride=1, padding=1))
+        if batch_norm:
+            self.conv.add_module("bnorm_1", nn.BatchNorm2d(out_ch))
+        if dropout > 0:
+            self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
+        self.conv.add_module("relu_1", nn.ReLU(inplace=True))
+        
     def forward(self, x):
         ''' Foward method '''
         x = self.conv(x)
@@ -36,16 +38,18 @@ class fwdconv(nn.Module):
     '''
     Foward convolution layer
     '''
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, batch_norm=True, dropout=0):
         ''' Constructor '''
         super(fwdconv, self).__init__()
         # Set conv layer
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 3, stride=1, padding=1),
-            nn.BatchNorm2d(out_ch),
-            nn.ReLU(inplace=True)
-        )
-
+        self.conv = nn.Sequential()
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, 3, stride=1, padding=1))
+        if batch_norm:
+            self.conv.add_module("bnorm_1", nn.BatchNorm2d(out_ch))
+        if dropout > 0:
+            self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
+        self.conv.add_module("relu_1", nn.ReLU(inplace=True))
+            
     def forward(self, x):
         ''' Foward method '''
         x = self.conv(x)
@@ -55,15 +59,17 @@ class downconv(nn.Module):
     '''
     Downconvolution layer
     '''
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, batch_norm=True, dropout=0):
         ''' Constructor '''
         super(downconv, self).__init__()
         # Set conv layer
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 3, stride=2, padding=1),
-            nn.BatchNorm2d(out_ch),
-            nn.ReLU(inplace=True)
-        )
+        self.conv = nn.Sequential()
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, 3, stride=2, padding=1))
+        if batch_norm:
+            self.conv.add_module("bnorm_1",nn.BatchNorm2d(out_ch))
+        if dropout > 0:
+            self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
+        self.conv.add_module("relu_1",nn.ReLU(inplace=True))
 
     def forward(self, x):
         ''' Foward method '''
@@ -74,7 +80,7 @@ class upconv(nn.Module):
     '''
     Upconvolution layer
     '''
-    def __init__(self, in_ch, out_ch, res_ch=0, bilinear=False):
+    def __init__(self, in_ch, out_ch, res_ch=0, bilinear=False, batch_norm=True, dropout=0):
         ''' Constructor '''
         super(upconv, self).__init__()
         # Check interpolation
@@ -83,7 +89,9 @@ class upconv(nn.Module):
         else:
             self.up = nn.ConvTranspose2d(in_ch, in_ch, 2, stride=2)
         # Set conv layer
-        self.conv = fwdconv(in_ch+res_ch, out_ch)
+        self.conv = nn.Sequential()
+        self.conv.add_module("fwdconv_1", fwdconv(in_ch+res_ch, out_ch, batch_norm=True, dropout=0))
+        self.conv.add_module("fwdconv_2", fwdconv(out_ch, out_ch))
         
     def forward(self, x, x_res=None):
         ''' Foward method '''
@@ -102,15 +110,17 @@ class outconv(nn.Module):
     '''
     Output convolution layer
     '''
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, batch_norm=True, dropout=0):
         ''' Constructor '''
         super(outconv, self).__init__()
         # Set conv layer
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 1, stride=1, padding=0),
-            nn.BatchNorm2d(out_ch),
-            nn.ReLU(inplace=True)
-        )
+        self.conv = nn.Sequential()
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, 1, stride=1, padding=0))
+        if batch_norm:
+            self.conv.add_module("bnorm_1",nn.BatchNorm2d(out_ch))
+        if dropout > 0:
+            self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
+        self.conv.add_module("relu_1",nn.ReLU(inplace=True))
 
         self.softmax = nn.Softmax2d()
 
@@ -131,17 +141,17 @@ class Unet(nn.Module):
         # Set input layer
         self.conv_init  = inconv(n_channels, 8)
         # Set downconvolution layer 1
-        self.conv_down1 = downconv(8, 16)
+        self.conv_down1 = downconv(8, 16, dropout=0.2)
         # Set downconvolution layer 2
-        self.conv_down2 = downconv(16, 32)
+        self.conv_down2 = downconv(16, 32, dropout=0.2)
         # Set downconvolution layer 3
-        self.conv_down3 = downconv(32, 64)
+        self.conv_down3 = downconv(32, 64, dropout=0.2)
         # Set upconvolution layer 1
-        self.conv_up1 = upconv(64, 32, res_ch=32)
+        self.conv_up1 = upconv(64, 32, res_ch=32, dropout=0.2)
         # Set upconvolution layer 2
-        self.conv_up2 = upconv(32, 16, res_ch=16)
+        self.conv_up2 = upconv(32, 16, res_ch=16, dropout=0.2)
         # Set upconvolution layer 3
-        self.conv_up3 = upconv(16, 8, res_ch=8)
+        self.conv_up3 = upconv(16, 8, res_ch=8, dropout=0.2)
         # Set output layer
         self.conv_out = outconv(8, n_classes)
         
