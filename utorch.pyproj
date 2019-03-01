@@ -20,6 +20,9 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="utils\logger.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="utils\losses.py">
       <SubType>Code</SubType>
     </Compile>

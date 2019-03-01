@@ -17,10 +17,12 @@ import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader
 
+from utils.logger import Logger
 from nets.unet import Unet2
 from utils.datasets import UltrasoundDataset
 from utils.losses import DiceLoss
 
+logger = Logger('./logs')
 
 '''
 Transformation parameters
@@ -104,6 +106,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
 
             # Print output preview
             if batch_idx == len(train_data) - 1:
+                ref_image = image
                 torchvision.utils.save_image(image[0,...], "input.png")
                 torchvision.utils.save_image(groundtruth[0,...], "groundtruth.png")
                 torchvision.utils.save_image(pred_masks[0,...], "output.png")
@@ -143,6 +146,29 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
                         'optimizer': optimizer.state_dict()
                         })
 
+
+        # ================================================================== #
+        #                        Tensorboard Logging                         #
+        # ================================================================== #
+
+        # 1. Log scalar values (scalar summary)
+        info = { 'avg_loss_train': avg_loss_train }
+
+        for tag, value in info.items():
+            logger.scalar_summary(tag, value, epoch+1)
+
+        # 2. Log values and gradients of the parameters (histogram summary)
+        for tag, value in net.named_parameters():
+            tag = tag.replace('.', '/')
+            logger.histo_summary(tag, value.data.cpu().numpy(), epoch+1)
+            if not value.grad is None:
+                logger.histo_summary(tag +'/grad', value.grad.data.cpu().numpy(), epoch+1)
+
+        # 3. Log training images (image summary)
+        info = { 'images': ref_image[0,...].cpu().numpy() }
+
+        for tag, im in info.items():
+            logger.image_summary(tag, im, epoch+1)
 
 
 # if __name__ == '__main__':

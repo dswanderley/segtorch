@@ -214,7 +214,7 @@ class Unet2(nn.Module):
 
         # Set output layer
         if type(n_classes) is list:
-            self.conv_out = nn.ModuleList()
+            self.conv_out = nn.ModuleList() # necessary for GPU convertion
             for n in n_classes:
                 c_out = outconv(8, n)
                 self.conv_out.append(c_out)
