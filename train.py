@@ -58,12 +58,15 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
         @param lr: learning rate
     '''
 
+    # Read Dataset
+    dataset_train = UltrasoundDataset(im_dir='Dataset/im/train/', gt_dir='Dataset/gt/train/')
+    data_train_len = len(dataset_train)
+    dataset_val = UltrasoundDataset(im_dir='Dataset/im/val/', gt_dir='Dataset/gt/val/')
+    data_val_len = len(dataset_val)
+    
     # Load Dataset
-    ovary_dataset = UltrasoundDataset(im_dir='Dataset/im/', gt_dir='Dataset/gt/', )
-    data_len = len(ovary_dataset)
-
-    train_data = DataLoader(ovary_dataset, batch_size=batch_size, shuffle=True)
-    # dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=threads, drop_last=True, pin_memory=True)
+    data_loader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+    data_loader_val = DataLoader(dataset_val, batch_size=1, shuffle=True)
     
     # Define parameters
     optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005) #optim.Adam(net.parameters())
@@ -78,9 +81,14 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
         net.train()
         # Init loss count
         loss_train_sum = 0
+        loss_val_sum = 0
+
+        # ================================================================== #
+        #                           Training                                 #
+        # ================================================================== #
         
-        for batch_idx, (im_name, image, gt_mask, ov_mask, fol_mask) in enumerate(train_data):
-        # for batch_idx, (im_name, image, gray_mask, multi_mask) in enumerate(train_data):
+        # Batch iteration - Training dataset
+        for batch_idx, (im_name, image, gt_mask, ov_mask, fol_mask) in enumerate(data_loader_train):
             
             # Active GPU train
             if torch.cuda.is_available():
@@ -88,8 +96,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
                 image = image.to(device)
                 gt_mask = gt_mask.to(device)
                 ov_mask = ov_mask.to(device)
-                fol_mask = fol_mask.to(device)
-            
+                fol_mask = fol_mask.to(device)            
             
             # Handle with ground truth
             if len(gt_mask.size()) < 4:
@@ -105,7 +112,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
                 pred_masks = pred_masks[0]
 
             # Print output preview
-            if batch_idx == len(train_data) - 1:
+            if batch_idx == data_train_len - 1:
                 ref_image = image
                 torchvision.utils.save_image(image[0,...], "input.png")
                 torchvision.utils.save_image(groundtruth[0,...], "groundtruth.png")
@@ -122,21 +129,57 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
             optimizer.step()           
 
         # Calculate average loss per epoch
-        avg_loss_train = loss_train_sum / data_len
-        print('loss: {:f}'.format(avg_loss_train))
+        avg_loss_train = loss_train_sum / data_train_len
+        print('training loss:  {:f}'.format(avg_loss_train))
         
-        # To evaluate on validation set
-        # XXXXXXXXXXXXXXXXXXXXX
-        # call train()
-        # epoch of training on the training set
-        # call eval()
-        # evaluate your model on the validation set
-        # repeat
-        # XXXXXXXXXXXXXXXXXXXXX
 
-        # Save weights
-        if best_loss > avg_loss_train:
-            best_loss = avg_loss_train
+        # ================================================================== #
+        #                          Validation                                #
+        # ================================================================== #
+
+        # To evaluate on validation set
+        net.eval()
+
+        # Batch iteration - Validation dataset
+        for batch_idx, (im_name, image, gt_mask, ov_mask, fol_mask) in enumerate(data_loader_val):
+
+            # Active GPU
+            if torch.cuda.is_available():
+                net = net.to(device)
+                image = image.to(device)
+                gt_mask = gt_mask.to(device)
+                ov_mask = ov_mask.to(device)
+                fol_mask = fol_mask.to(device)            
+
+            # Handle with ground truth
+            if len(gt_mask.size()) < 4:
+                groundtruth = gt_mask.long()
+            else:
+                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
+            
+            # Prediction
+            optimizer.zero_grad()
+            image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
+            val_masks = net(image)
+            # Handle multiples outputs
+            if type(val_masks) is list:
+                val_masks = val_masks[0]
+
+            # Calculate loss for each batch
+            val_loss = criterion(val_masks, groundtruth)
+            loss_val_sum += len(image) * val_loss.item()
+
+        # Calculate average validation loss per epoch
+        avg_loss_val = loss_val_sum / data_val_len
+        print('validation loss: {:f}'.format(avg_loss_val))
+
+
+        # ================================================================== #
+        #                         Save weights                               #
+        # ================================================================== #
+ 
+        if best_loss > avg_loss_val:
+            best_loss = avg_loss_val
 
             saveweights({
                         'epoch': epoch,
@@ -146,6 +189,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
                         'optimizer': optimizer.state_dict()
                         })
 
+'''
 
         # ================================================================== #
         #                        Tensorboard Logging                         #
@@ -169,14 +213,14 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
 
         for tag, im in info.items():
             logger.image_summary(tag, im, epoch+1)
-
+'''
 
 # if __name__ == '__main__':
 
 
 # Load Unet
 net = Unet2(n_channels=1, n_classes=[3,2])
-print(net)
+#print(net)
 
 # Load CUDA if exist
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
