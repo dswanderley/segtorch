@@ -16,12 +16,16 @@ import numpy as np
 import torch.nn as nn
 
 from torch import optim
+from torchvision import transforms
 from torch.utils.data import DataLoader
 
 from utils.logger import Logger
 from nets.unet import Unet2
 from utils.datasets import UltrasoundDataset
 from utils.losses import DiceLoss
+
+import utils.transformations as tsfrm
+
 
 
 # Get time to generate output name
@@ -52,6 +56,12 @@ Transformation parameters
 #shear_range = 0.0
 #im_size = (512,512)
 
+transform = tsfrm.Compose([tsfrm.RandomHorizontalFlip(p=0.5),
+                           tsfrm.RandomVerticalFlip(p=0.5),
+                           tsfrm.RandomAffine(90, translate=(0.15, 0.15), scale=(0.75, 1.5), resample=3, fillcolor=0)
+                           ])
+
+
 
 def saveweights(state):
     '''
@@ -78,7 +88,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
     '''
 
     # Read Dataset
-    dataset_train = UltrasoundDataset(im_dir='Dataset/im/train/', gt_dir='Dataset/gt/train/')
+    dataset_train = UltrasoundDataset(im_dir='Dataset/im/train/', gt_dir='Dataset/gt/train/', transform=transform)
     data_train_len = len(dataset_train)
     dataset_val = UltrasoundDataset(im_dir='Dataset/im/val/', gt_dir='Dataset/gt/val/')
     data_val_len = len(dataset_val)

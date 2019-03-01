@@ -12,9 +12,11 @@ import torch
 
 import numpy as np
 
-from torch.utils.data import Dataset
+from torchvision import transforms
 from PIL import Image #,transform
 from skimage import exposure, filters
+from torch.utils.data import Dataset
+
 
 class UltrasoundDataset(Dataset):
     """B-mode ultrasound dataset"""
@@ -40,6 +42,11 @@ class UltrasoundDataset(Dataset):
         @
         """
         return len(self.images_name)
+
+    def transformations(image, mask):
+        print('')
+
+
 
     def __getitem__(self, idx):
         """
@@ -74,7 +81,11 @@ class UltrasoundDataset(Dataset):
         # Load Ground Truth Image Image
         gt_path = os.path.join(self.gt_dir, im_name)    # PIL image in [0,255], 1 channel
         gt_im = Image.open(gt_path)
-
+                
+        # Apply transformations
+        if self.transform:
+            image, gt_im = self.transform(image, gt_im)
+                        
         '''
             Input Image preparation
         '''
@@ -90,6 +101,7 @@ class UltrasoundDataset(Dataset):
         gt_np = np.array(gt_im).astype(np.float32)
         if (len(gt_np.shape) > 2): 
             gt_np = gt_np[:,:,0]
+
         
         # Multi mask - background (R = 255) / ovary (G = 255) / follicle (B = 255) 
         t1 = 128./2.
@@ -164,14 +176,10 @@ class UltrasoundDataset(Dataset):
             im_np = imclahe
 
         # Print data if necessary
-        #Image.fromarray((255*imclahe).astype(np.uint8)).save("im_np.png")      
+        #Image.fromarray((255*im_np).astype(np.uint8)).save("im_np.png")      
         #Image.fromarray((255*gt_mask).astype(np.uint8)).save("gt_all.png")      
         #Image.fromarray((255*ov_mask[...,1]).astype(np.uint8)).save("gt_ov.png")      
         #Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
-
-        # Apply transformations
-        if self.transform:
-            im_np, gt_mask, ov_mask, fol_mask = self.transform(im_np, gt_mask, ov_mask, fol_mask)
         
         # Convert to torch (to be used on DataLoader)
         return im_name, torch.from_numpy(im_np), torch.from_numpy(gt_mask), torch.from_numpy(ov_mask), torch.from_numpy(fol_mask)

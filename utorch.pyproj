@@ -34,6 +34,9 @@
     <Compile Include="utils\datasets.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="utils\transformations.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="utils\__init__.py" />
   </ItemGroup>
   <ItemGroup>
