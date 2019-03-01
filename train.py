@@ -111,12 +111,10 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
             if type(pred_masks) is list:
                 pred_masks = pred_masks[0]
 
-            # Print output preview
-            if batch_idx == data_train_len - 1:
-                ref_image = image
-                torchvision.utils.save_image(image[0,...], "input.png")
-                torchvision.utils.save_image(groundtruth[0,...], "groundtruth.png")
-                torchvision.utils.save_image(pred_masks[0,...], "output.png")
+            # Output preview
+            if batch_idx == len(data_loader_train) - 1:
+                ref_image_train = image[0,...]
+                ref_pred_train = pred_masks[0,...]
             
             # Calculate loss for each batch
             loss = criterion(pred_masks, groundtruth)
@@ -165,9 +163,15 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
             if type(val_masks) is list:
                 val_masks = val_masks[0]
 
+            # Print output preview
+            if batch_idx == len(data_loader_val) - 1:
+                ref_image_val = image[0,...]
+                ref_pred_val = val_masks[0,...]
+
             # Calculate loss for each batch
             val_loss = criterion(val_masks, groundtruth)
             loss_val_sum += len(image) * val_loss.item()
+
 
         # Calculate average validation loss per epoch
         avg_loss_val = loss_val_sum / data_val_len
@@ -180,7 +184,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
  
         if best_loss > avg_loss_val:
             best_loss = avg_loss_val
-
+            # save
             saveweights({
                         'epoch': epoch,
                         'arch': 'unet',
@@ -189,15 +193,14 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
                         'optimizer': optimizer.state_dict()
                         })
 
-'''
-
         # ================================================================== #
         #                        Tensorboard Logging                         #
         # ================================================================== #
 
         # 1. Log scalar values (scalar summary)
-        info = { 'avg_loss_train': avg_loss_train }
-
+        info = { 'avg_loss_train': avg_loss_train,
+                 'avg_loss_valid': avg_loss_val
+               }
         for tag, value in info.items():
             logger.scalar_summary(tag, value, epoch+1)
 
@@ -209,11 +212,14 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
                 logger.histo_summary(tag +'/grad', value.grad.data.cpu().numpy(), epoch+1)
 
         # 3. Log training images (image summary)
-        info = { 'images': ref_image[0,...].cpu().numpy() }
-
+        info = {'image_train': ref_image_train.cpu().numpy(),
+                'predi_train': ref_pred_train.cpu().numpy(),
+                'image_valid': ref_image_val.cpu().numpy(),
+                'predi_valid': ref_pred_val.cpu().numpy()
+               }
         for tag, im in info.items():
             logger.image_summary(tag, im, epoch+1)
-'''
+
 
 # if __name__ == '__main__':
 
