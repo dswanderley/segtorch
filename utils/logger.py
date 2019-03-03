@@ -2,7 +2,7 @@
 
 import tensorflow as tf
 import numpy as np
-import scipy.misc 
+import scipy.misc
 try:
     from StringIO import StringIO  # Python 2.7
 except ImportError:
@@ -10,7 +10,7 @@ except ImportError:
 
 
 class Logger(object):
-    
+
     def __init__(self, log_dir):
         """Create a summary writer logging to log_dir."""
         self.writer = tf.summary.FileWriter(log_dir)
@@ -42,7 +42,7 @@ class Logger(object):
         # Create and write Summary
         summary = tf.Summary(value=img_summaries)
         self.writer.add_summary(summary, step)
-        
+
     def histo_summary(self, tag, values, step, bins=1000):
         """Log a histogram of the tensor of values."""
 

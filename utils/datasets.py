@@ -5,7 +5,8 @@ Created on Wed Fev 27 18:37:04 2019
 @author: Diego Wanderley
 @python: 3.6
 @description: Dataset loaders (images + ground truth)
-"""   
+
+"""
 
 import os
 import torch
@@ -33,9 +34,13 @@ class UltrasoundDataset(Dataset):
         self.im_dir = im_dir
         self.gt_dir = gt_dir
         self.transform = transform
-        self.images_name = os.listdir(self.im_dir)
         self.one_hot = one_hot
         self.clahe = clahe
+
+        ldir_im = set(x for x in os.listdir(self.im_dir))
+        ldir_gt = set(x for x in os.listdir(self.gt_dir))
+        self.images_name = list(ldir_im.intersection(ldir_gt))
+
 
     def __len__(self):
         """
@@ -43,14 +48,9 @@ class UltrasoundDataset(Dataset):
         """
         return len(self.images_name)
 
-    def transformations(image, mask):
-        print('')
-
-
-
     def __getitem__(self, idx):
         """
-        @
+        @idx (int): file index.
         """
 
         '''
@@ -69,7 +69,7 @@ class UltrasoundDataset(Dataset):
             encods = [self.one_hot, self.one_hot, self.one_hot]
         else:
             encods = [True, True, True]
-        
+
         '''
             Load images
         '''
@@ -81,11 +81,11 @@ class UltrasoundDataset(Dataset):
         # Load Ground Truth Image Image
         gt_path = os.path.join(self.gt_dir, im_name)    # PIL image in [0,255], 1 channel
         gt_im = Image.open(gt_path)
-                
+
         # Apply transformations
         if self.transform:
             image, gt_im = self.transform(image, gt_im)
-                        
+
         '''
             Input Image preparation
         '''
@@ -99,11 +99,11 @@ class UltrasoundDataset(Dataset):
         '''
         # Grouth truth to array
         gt_np = np.array(gt_im).astype(np.float32)
-        if (len(gt_np.shape) > 2): 
+        if (len(gt_np.shape) > 2):
             gt_np = gt_np[:,:,0]
 
-        
-        # Multi mask - background (R = 255) / ovary (G = 255) / follicle (B = 255) 
+
+        # Multi mask - background (R = 255) / ovary (G = 255) / follicle (B = 255)
         t1 = 128./2.
         t2 = 255. - t1
         # Background mask
@@ -112,14 +112,14 @@ class UltrasoundDataset(Dataset):
         # Stroma mask
         mask_stroma = np.zeros((gt_np.shape[0], gt_np.shape[1]))
         mask_stroma[(gt_np >= t1) & (gt_np <= t2)] = 255.
-        
+
         # Follicles mask
         mask_follicle = np.zeros((gt_np.shape[0], gt_np.shape[1]))
         mask_follicle[gt_np > t2] = 255.
-        
+
         # Main mask output
         if encods[0]:
-            # Multi mask - background (R = 1) / ovary (G = 1) / follicle (B = 1) 
+            # Multi mask - background (R = 1) / ovary (G = 1) / follicle (B = 1)
             multi_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 3))
             multi_mask[...,0] = mask_bkgound
             multi_mask[...,1] = mask_stroma
@@ -142,7 +142,7 @@ class UltrasoundDataset(Dataset):
             ov_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 2))
             ov_mask[...,0] = mask_bkgound
             ov_mask[...,1] = mask_stroma
-            ov_mask = (ov_mask / 255.).astype(np.float32)            
+            ov_mask = (ov_mask / 255.).astype(np.float32)
         else:
             # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
             ov_mask = (mask_ovary / 255.).astype(np.float32)
@@ -164,7 +164,7 @@ class UltrasoundDataset(Dataset):
         else:
             # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
             fol_mask = (mask_edges / 255.).astype(np.float32)
-                            
+
         '''
             Input data: Add CLAHE if necessary
         '''
@@ -176,11 +176,11 @@ class UltrasoundDataset(Dataset):
             im_np = imclahe
 
         # Print data if necessary
-        #Image.fromarray((255*im_np).astype(np.uint8)).save("im_np.png")      
-        #Image.fromarray((255*gt_mask).astype(np.uint8)).save("gt_all.png")      
-        #Image.fromarray((255*ov_mask[...,1]).astype(np.uint8)).save("gt_ov.png")      
+        #Image.fromarray((255*im_np).astype(np.uint8)).save("im_np.png")
+        #Image.fromarray((255*gt_mask).astype(np.uint8)).save("gt_all.png")
+        #Image.fromarray((255*ov_mask[...,1]).astype(np.uint8)).save("gt_ov.png")
         #Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
-        
+
         # Convert to torch (to be used on DataLoader)
         return im_name, torch.from_numpy(im_np), torch.from_numpy(gt_mask), torch.from_numpy(ov_mask), torch.from_numpy(fol_mask)
 

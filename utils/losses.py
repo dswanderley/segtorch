@@ -5,7 +5,7 @@ Created on Wed Fev 27 18:37:58 2019
 @author: Diego Wanderley
 @python: 3.6
 @description: Alternative Loss Functions (Dice)
-"""   
+"""
 
 import torch.nn as nn
 
@@ -13,7 +13,7 @@ import torch.nn as nn
 class DiceLoss (nn.Module):
     '''
     Dice Loss (Ignore background - channel 0)
-    
+
     Arguments:
         @param prediction: tensor with predictions classes
         @param groundtruth: tensor with ground truth mask

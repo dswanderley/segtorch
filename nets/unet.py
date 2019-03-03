@@ -28,7 +28,7 @@ class inconv(nn.Module):
         if dropout > 0:
             self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
         self.conv.add_module("relu_1", nn.ReLU(inplace=True))
-        
+
     def forward(self, x):
         ''' Foward method '''
         x = self.conv(x)
@@ -49,7 +49,7 @@ class fwdconv(nn.Module):
         if dropout > 0:
             self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
         self.conv.add_module("relu_1", nn.ReLU(inplace=True))
-            
+
     def forward(self, x):
         ''' Foward method '''
         x = self.conv(x)
@@ -92,16 +92,16 @@ class upconv(nn.Module):
         self.conv = nn.Sequential()
         self.conv.add_module("fwdconv_1", fwdconv(in_ch+res_ch, out_ch, batch_norm=True, dropout=0))
         self.conv.add_module("fwdconv_2", fwdconv(out_ch, out_ch))
-        
+
     def forward(self, x, x_res=None):
         ''' Foward method '''
         x_up = self.up(x)
-        
+
         if x_res is None:
             x_cat = x_up
         else:
             x_cat = torch.cat((x_up, x_res), 1)
-            
+
         x_conv = self.conv(x_cat)
 
         return x_conv
@@ -154,7 +154,7 @@ class Unet(nn.Module):
         self.conv_up3 = upconv(16, 8, res_ch=8)
         # Set output layer
         self.conv_out = outconv(8, n_classes)
-        
+
     def forward(self, x):
         ''' Foward method '''
         # input
@@ -170,7 +170,7 @@ class Unet(nn.Module):
         # output
         x = self.conv_out(x6)
         return x
-    
+
 
 class Unet2(nn.Module):
     '''
@@ -220,7 +220,7 @@ class Unet2(nn.Module):
                 self.conv_out.append(c_out)
         else:
             self.conv_out = outconv(8, n_classes)
-        
+
     def forward(self, x):
         ''' Foward method '''
 

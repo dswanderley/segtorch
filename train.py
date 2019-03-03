@@ -5,7 +5,7 @@ Created on Wed Fev 08 00:40:00 2019
 @author: Diego Wanderley
 @python: 3.6 and Pytroch
 @description: Script for network training
-"""   
+"""
 
 import os
 import time
@@ -39,10 +39,10 @@ def gettrainname(name):
     Returns: full_name (string)
     '''
     tm = time.gmtime()
-    st_mon = str(tm.tm_mon) if tm.tm_mon > 9 else '0'+str(tm.tm_mon)
-    st_day = str(tm.tm_mday) if tm.tm_mday > 9 else '0'+str(tm.tm_mday)
-    st_hour = str(tm.tm_hour) if tm.tm_hour > 9 else '0'+str(tm.tm_hour)
-    st_min = str(tm.tm_min) if tm.tm_min > 9 else '0'+str(tm.tm_min)           
+    st_mon = str(tm.tm_mon) if tm.tm_mon > 9 else '0'+ str(tm.tm_mon)
+    st_day = str(tm.tm_mday) if tm.tm_mday > 9 else '0'+ str(tm.tm_mday)
+    st_hour = str(tm.tm_hour) if tm.tm_hour > 9 else '0'+ str(tm.tm_hour)
+    st_min = str(tm.tm_min) if tm.tm_min > 9 else '0'+ str(tm.tm_min)
     tm_str = str(tm.tm_year) + st_mon + st_day + '_' + st_hour + st_min
     # log name - eg: both
     return tm_str + '_' + name
@@ -50,18 +50,10 @@ def gettrainname(name):
 '''
 Transformation parameters
 '''
-#rotate_range = 25
-#translate_range = (10.0, 10.0)
-#scale_range = (0.90, 1.50)
-#shear_range = 0.0
-#im_size = (512,512)
-
 transform = tsfrm.Compose([tsfrm.RandomHorizontalFlip(p=0.5),
                            tsfrm.RandomVerticalFlip(p=0.5),
                            tsfrm.RandomAffine(90, translate=(0.15, 0.15), scale=(0.75, 1.5), resample=3, fillcolor=0)
                            ])
-
-
 
 def saveweights(state):
     '''
@@ -72,7 +64,6 @@ def saveweights(state):
     '''
     path = './weights/'
     filename = path + train_name + '_weights.pth.tar'
-    
     torch.save(state, filename)
 
 
@@ -92,11 +83,11 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
     data_train_len = len(dataset_train)
     dataset_val = UltrasoundDataset(im_dir='Dataset/im/val/', gt_dir='Dataset/gt/val/')
     data_val_len = len(dataset_val)
-    
+
     # Load Dataset
     data_loader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
     data_loader_val = DataLoader(dataset_val, batch_size=1, shuffle=True)
-    
+
     # Define parameters
     optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005) #optim.Adam(net.parameters())
     criterion =  DiceLoss() # nn.CrossEntropyLoss()
@@ -115,18 +106,18 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
         # ================================================================== #
         #                           Training                                 #
         # ================================================================== #
-        
+
         # Batch iteration - Training dataset
         for batch_idx, (im_name, image, gt_mask, ov_mask, fol_mask) in enumerate(data_loader_train):
-            
+
             # Active GPU train
             if torch.cuda.is_available():
                 net = net.to(device)
                 image = image.to(device)
                 gt_mask = gt_mask.to(device)
                 ov_mask = ov_mask.to(device)
-                fol_mask = fol_mask.to(device)            
-            
+                fol_mask = fol_mask.to(device)
+
             # Handle with ground truth
             if len(gt_mask.size()) < 4:
                 groundtruth = gt_mask.long()
@@ -144,7 +135,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
             if batch_idx == len(data_loader_train) - 1:
                 ref_image_train = image[0,...]
                 ref_pred_train = pred_masks[0,...]
-            
+
             # Calculate loss for each batch
             loss = criterion(pred_masks, groundtruth)
             #loss = criterion(pred_masks[-1,...], groundtruth[-1,...])
@@ -153,12 +144,12 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
             # Update weights
             optimizer.zero_grad()
             loss.backward()
-            optimizer.step()           
+            optimizer.step()
 
         # Calculate average loss per epoch
         avg_loss_train = loss_train_sum / data_train_len
         print('training loss:  {:f}'.format(avg_loss_train))
-        
+
 
         # ================================================================== #
         #                          Validation                                #
@@ -176,14 +167,14 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
                 image = image.to(device)
                 gt_mask = gt_mask.to(device)
                 ov_mask = ov_mask.to(device)
-                fol_mask = fol_mask.to(device)            
+                fol_mask = fol_mask.to(device)
 
             # Handle with ground truth
             if len(gt_mask.size()) < 4:
                 groundtruth = gt_mask.long()
             else:
                 groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
-            
+
             # Prediction
             optimizer.zero_grad()
             image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
@@ -210,7 +201,7 @@ def train_net(net, epochs=100, batch_size=8, lr=0.1):
         # ================================================================== #
         #                         Save weights                               #
         # ================================================================== #
- 
+
         if best_loss > avg_loss_val:
             best_loss = avg_loss_val
             # save
