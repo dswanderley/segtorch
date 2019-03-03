@@ -48,6 +48,7 @@ class UltrasoundDataset(Dataset):
         """
         return len(self.images_name)
 
+
     def __getitem__(self, idx):
         """
         @idx (int): file index.
