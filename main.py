@@ -19,7 +19,7 @@ import utils.transformations as tsfrm
 from torch import optim
 from utils.logger import Logger
 from nets.unet import Unet2
-from utils.datasets import UltrasoundDataset
+from utils.datasets import OvaryDataset
 from utils.losses import DiceLoss
 from train import Training
 from predict import Inference
@@ -66,9 +66,9 @@ if __name__ == '__main__':
                            tsfrm.RandomAffine(90, translate=(0.15, 0.15), scale=(0.75, 1.5), resample=3, fillcolor=0)
                            ])
     # Dataset definitions
-    dataset_train = UltrasoundDataset(im_dir='Dataset/im/train/', gt_dir='Dataset/gt/train/', transform=transform)
-    dataset_val = UltrasoundDataset(im_dir='Dataset/im/val/', gt_dir='Dataset/gt/val/')
-    dataset_test = UltrasoundDataset(im_dir='Dataset/im/test/', gt_dir='Dataset/gt/test/')
+    dataset_train = OvaryDataset(im_dir='Dataset/im/train/', gt_dir='Dataset/gt/train/', transform=transform)
+    dataset_val = OvaryDataset(im_dir='Dataset/im/val/', gt_dir='Dataset/gt/val/')
+    dataset_test = OvaryDataset(im_dir='Dataset/im/test/', gt_dir='Dataset/gt/test/')
 
     # Training Parameters
     optmizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0005)

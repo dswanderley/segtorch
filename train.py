@@ -11,9 +11,15 @@ import torch
 from torch.utils.data import DataLoader
 
 class Training:
+    """
+        Training classe
+    """
 
-    def __init__(self, model, device, train_set, valid_set, opt, loss, logger=None, train_name='net'):
-
+    def __init__(self, model, device, train_set, valid_set,
+                opt, loss, logger=None, train_name='net'):
+        '''
+            Training class - Constructor
+        '''
         self.model = model
         self.device = device
         self.dataset_train = train_set
@@ -25,10 +31,10 @@ class Training:
 
     def _saveweights(self, state):
         '''
-        Save network weights.
+            Save network weights.
 
-        Arguments:
-        @state (dict): parameters of the network
+            Arguments:
+            @state (dict): parameters of the network
         '''
         path = './weights/'
         filename = path + self.train_name + '_weights.pth.tar'
@@ -45,15 +51,18 @@ class Training:
         self.model.train()
 
         # Batch iteration - Training dataset
-        for batch_idx, (im_name, image, gt_mask, ov_mask, fol_mask) in enumerate(data_loader_train):
-
+        #for batch_idx, (im_name, image, gt_mask, ov_mask, fol_mask) in enumerate(data_loader_train):
+        for batch_idx, sample in enumerate(data_loader_train):
+            # Load data
+            image = sample['image']
+            gt_mask = sample['gt_mask']
             # Active GPU train
             if torch.cuda.is_available():
                 self.model = self.model.to(self.device)
                 image = image.to(self.device)
                 gt_mask = gt_mask.to(self.device)
-                ov_mask = ov_mask.to(self.device)
-                fol_mask = fol_mask.to(self.device)
+                #ov_mask = ov_mask.to(self.device)
+                #fol_mask = fol_mask.to(self.device)
 
             # Handle with ground truth
             if len(gt_mask.size()) < 4:
@@ -62,7 +71,7 @@ class Training:
                 groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
 
             # Run prediction
-            image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
+            image.unsqueeze_(1) # add a dimension to the tensor
             pred_masks = self.model(image)
             # Handle multiples outputs
             if type(pred_masks) is list:
@@ -98,15 +107,17 @@ class Training:
         self.model.eval()
 
         # Batch iteration - Validation dataset
-        for batch_idx, (im_name, image, gt_mask, ov_mask, fol_mask) in enumerate(data_loader_val):
-
+        for batch_idx, sample in enumerate(data_loader_val):
+            # Load data
+            image = sample['image']
+            gt_mask = sample['gt_mask']
             # Active GPU
             if torch.cuda.is_available():
                 self.model = self.model.to(self.device)
                 image = image.to(self.device)
                 gt_mask = gt_mask.to(self.device)
-                ov_mask = ov_mask.to(self.device)
-                fol_mask = fol_mask.to(self.device)
+                #ov_mask = ov_mask.to(self.device)
+                #fol_mask = fol_mask.to(self.device)
 
             # Handle with ground truth
             if len(gt_mask.size()) < 4:

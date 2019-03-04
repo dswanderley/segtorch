@@ -14,19 +14,25 @@ import torch
 import numpy as np
 
 from torchvision import transforms
-from PIL import Image #,transform
+from PIL import Image
 from skimage import exposure, filters
 from torch.utils.data import Dataset
 
+from scipy import ndimage as ndi
 
-class UltrasoundDataset(Dataset):
-    """B-mode ultrasound dataset"""
 
-    def __init__(self, im_dir='im', gt_dir='gt', one_hot=True, clahe=False, transform=None):
+class OvaryDataset(Dataset):
+    """
+    Dataset of ovarian structures from B-mode images.
+    """
+
+    def __init__(self, im_dir='im', gt_dir='gt',
+    one_hot=True, clahe=False, transform=None):
         """
         Args:
             im_dir (string): Directory with all the images.
-            gt_dir (string): Directory with all the masks, with the same name of the original images.
+            gt_dir (string): Directory with all the masks, with the same name of
+            the original images.
             on_hot (bool): Optional output encoding one-hot-encoding or gray levels
             transform (callable, optional): Optional transform to be applied
                 on a sample.
@@ -44,21 +50,28 @@ class UltrasoundDataset(Dataset):
 
     def __len__(self):
         """
-        @
+            Get dataset length.
         """
         return len(self.images_name)
 
 
     def __getitem__(self, idx):
         """
-        @idx (int): file index.
+            Get batch of images and related data.
+
+            Args:
+                @idx (int): file index.
+            Returns:
+                @sample (dict): im_name, image, gt_mask, ovary_mask,
+                    follicle_mask, follicle_instances, num_follicles.
         """
 
         '''
             Output encoding preparation
         '''
         # Output encod accepts two types: one-hot-encoding or gray scale levels
-        # Variable encods contains a list of each data encoding: 1) Full GT mask, 2) Ovary mask, 3) Follicle mask
+        # Variable encods contains a list of each data encoding:
+        # 1) Full GT mask, 2) Ovary mask, 3) Follicle mask
         if type(self.one_hot) is list:      # When a list is provided
             encods = []
             for i in range(3):
@@ -102,7 +115,6 @@ class UltrasoundDataset(Dataset):
         gt_np = np.array(gt_im).astype(np.float32)
         if (len(gt_np.shape) > 2):
             gt_np = gt_np[:,:,0]
-
 
         # Multi mask - background (R = 255) / ovary (G = 255) / follicle (B = 255)
         t1 = 128./2.
@@ -167,13 +179,20 @@ class UltrasoundDataset(Dataset):
             fol_mask = (mask_edges / 255.).astype(np.float32)
 
         '''
+            Instance Follicles mask
+        '''
+        # Get mask labeling each follicle from 1 to N value.
+        inst_mask, num_inst = ndi.label(mask_follicle)
+
+        '''
             Input data: Add CLAHE if necessary
         '''
         # Check has clahe
         if self.clahe:
             imclahe = np.zeros((im_np.shape[0], im_np.shape[1], 2))
             imclahe[...,0] = im_np
-            imclahe[...,1] = exposure.equalize_adapthist(im_np, kernel_size=im_np.shape[0]/8, clip_limit=0.02, nbins=256)
+            imclahe[...,1] = exposure.equalize_adapthist(im_np, kernel_size=im_np.shape[0]/8,
+                            clip_limit=0.02, nbins=256)
             im_np = imclahe
 
         # Print data if necessary
@@ -183,5 +202,12 @@ class UltrasoundDataset(Dataset):
         #Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
 
         # Convert to torch (to be used on DataLoader)
-        return im_name, torch.from_numpy(im_np), torch.from_numpy(gt_mask), torch.from_numpy(ov_mask), torch.from_numpy(fol_mask)
+        sample =  { 'im_name': im_name,
+                    'image': torch.from_numpy(im_np),
+                    'gt_mask': torch.from_numpy(gt_mask),
+                    'ovary_mask': torch.from_numpy(ov_mask),
+                    'follicle_mask': torch.from_numpy(fol_mask),
+                    'follicle_instances': torch.from_numpy(inst_mask),
+                    'num_follicles':  num_inst }
 
+        return sample
