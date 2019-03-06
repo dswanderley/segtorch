@@ -2,11 +2,12 @@ import os
 import time
 from PIL import Image
 from glob import glob
-from sklearn.model_selection import train_test_split
-from sklearn.cluster import MeanShift, estimate_bandwidth
+from sklearn.cluster import MeanShift#, estimate_bandwidth
 import numpy as np
 
 import torch
+from torch.autograd import Variable
+
 
 from scipy import ndimage as ndi
 
@@ -27,7 +28,7 @@ def cluster(prediction, bandwidth):
 
 
 
-def calculate_means(pred, gt, n_objects, max_n_objects, usegpu):
+def calculate_means(pred, gt, n_objects, max_n_objects):
     """pred: bs, height * width, n_filters
        gt: bs, height * width, n_instances"""
 
@@ -40,37 +41,72 @@ def calculate_means(pred, gt, n_objects, max_n_objects, usegpu):
     gt_expanded = gt.unsqueeze(3)
 
     pred_masked = pred_repeated * gt_expanded
+    
+    means = []
+    for i in range(bs):
+        _n_objects_sample = n_objects[i]
+        # n_loc, n_objects, n_filters
+        _pred_masked_sample = pred_masked[i, :, : _n_objects_sample]
+        # n_loc, n_objects, 1
+        _gt_expanded_sample = gt_expanded[i, :, : _n_objects_sample]
 
+        _mean_sample = _pred_masked_sample.sum(0) / _gt_expanded_sample.sum(0)  # n_objects, n_filters
+        if (max_n_objects - _n_objects_sample) != 0:
+            n_fill_objects = int(max_n_objects - _n_objects_sample)
+            _fill_sample = torch.zeros(n_fill_objects, n_filters)
+            #if usegpu:
+            #    _fill_sample = _fill_sample.cuda()
+            _fill_sample = Variable(_fill_sample)
+            _mean_sample = torch.cat((_mean_sample, _fill_sample), dim=0)
+        means.append(_mean_sample)
 
+    means = torch.stack(means)
 
+    # means = pred_masked.sum(1) / gt_expanded.sum(1)
+    # # bs, n_instances, n_filters
 
-eg0 = torch.rand(1,3,4,4)
-
-eg1 = eg0.permute(0,2,3,1).contiguous().view(1,4*4,3)
-
-eg2 = eg1.unsqueeze(2)
-
-eg3 = eg1.unsqueeze(2).expand(1, 4*4, 3, 1)
-
-
+    return means
 
 
 path_gt ='cluster/gt.png'
-path_pred ='cluster/pred.png'
-
-
 img_gt = Image.open(path_gt)
-img_pred = Image.open(path_pred)
-
 img_gt.load()
-img_pred.load()
 
 data_gt = np.asarray(img_gt, dtype="float32") / 255.
-data_gt = data_gt[...,1]
+#data_gt = data_gt[...,1]
+
+inst_mask, num_inst = ndi.label(data_gt)
+gt = torch.from_numpy(inst_mask)
+#gt =   torch.rand(1,512*512,4)
+height, width = gt.shape
+
+tgt = np.zeros((height, width, num_inst))
+for i in range(0, num_inst):
+    aux = np.zeros((height, width))
+    aux[inst_mask == i+1] = 1.
+    tgt[...,i] = aux
+
+target = torch.from_numpy(tgt.astype(np.float32))
+target.unsqueeze_(1)
+target = target.permute(0, 2, 3, 1).contiguous().view(1, height * width, num_inst)
+# Pred
+pred = torch.rand(1,512*512,2)
+# Calc
+cluster_means = calculate_means(pred, target, [4], 20)
+
+
+
+"""
+
+#path_pred ='cluster/pred.png'
+img_pred = Image.open(path_pred)
+img_pred.load()
+
 data_pred = np.asarray(img_pred, dtype="float32") / 255.
 data_pred = data_pred[...,1]
 
 h, w, feature_dim = data_pred.shape
 
-
 num_clusters, labels, cluster_centers = cluster(data_pred.reshape([h*w, feature_dim]), bandwidth)
+
+"""

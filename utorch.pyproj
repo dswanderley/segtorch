@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{87e324df-3010-4c36-b9d8-a41db46b4973}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>train.py</StartupFile>
+    <StartupFile>test_cluster.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -20,6 +20,10 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="main.py" />
+    <Compile Include="predict.py" />
+    <Compile Include="test.py" />
+    <Compile Include="test_cluster.py" />
     <Compile Include="utils\logger.py">
       <SubType>Code</SubType>
     </Compile>
