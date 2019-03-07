@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{87e324df-3010-4c36-b9d8-a41db46b4973}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>test_cluster.py</StartupFile>
+    <StartupFile>test.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>

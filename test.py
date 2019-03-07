@@ -58,55 +58,92 @@ def get_instance_masks(prediction, bandwidth):
 
 
 
-img_dir='Dataset/im/train/'
-lbl_dir='Dataset/gt/train/'
-
-image_paths = glob(os.path.join(img_dir, '*.png'))
-label_paths = glob(os.path.join(lbl_dir, '*.png'))
-
-image_paths.sort()
-label_paths.sort()
-
-X_train, X_valid, y_train, y_valid = train_test_split(image_paths, label_paths, test_size=0.10, random_state=42)
-print ('Number of train samples', len(y_train))
-print ('Number of valid samples', len(y_valid))
-
 bandwidth = 0.7
 
 
-img = Image.open(y_valid[0])
-img.load()
-data = np.asarray( img, dtype="int32" )
+path_gt ='cluster/gt.png'
+img_gt = Image.open(path_gt)
+img_gt.load()
+data = np.asarray(img_gt, dtype="int32" )
 valid_pred = data/255.
 valid_pred[valid_pred < 1] = 0.
 valid_pred = valid_pred[...,2]
 
-correct_label, _ = ndi.label(valid_pred)
+instance_labels, num_inst = ndi.label(valid_pred)
+instance_labels = instance_labels / num_inst
+Image.fromarray((255*instance_labels).astype(np.uint8)).save("instances.png")
+#clt = cluster(valid_pred, bandwidth)
+
+#correct_label = tf.placeholder(dtype=tf.float32, shape=(None, 512, 512))
+#correct_label = tf.convert_to_tensor(instance_labels, dtype=tf.float32)
 
 
-clt = cluster(valid_pred, bandwidth)
+correct_label = np.reshape(instance_labels, (512*512,1))
 
-Image.fromarray((255*correct_label/4).astype(np.uint8)).save("instances.png")
+unique_id = correct_label
+unique_labels, counts = np.unique(correct_label, return_counts=True)
+counts = counts.astype(float)
+num_instances  = len(unique_labels)
+
+#segmented_sum = tf.unsorted_segment_sum(reshaped_pred, unique_id, num_instances)
 
 
-correct_label = tf.reshape(correct_label, [512*512])
-correct_label = tf.placeholder(dtype=tf.float32, shape=(None, 512, 512))
+def unsorted_segment_sum(data, indexes):
 
-reshaped_pred = tf.reshape(correct_label, [512*512, 3])
 
-unique_labels, unique_id, counts = tf.unique_with_counts(correct_label)
+    uid = np.unique(indexes)
+    out = np.zeros(uid.shape)
+
+    for i in range(uid.shape[0]):
+
+        u = uid[i]
+
+        idxs = np.zeros(indexes.shape)
+        idxs[indexes == u] = 1
+        
+        sum_id = np.sum(idxs.T.dot(data))
+
+        out[i] = sum_id
+
+    return out
+
+
+ooo = unsorted_segment_sum(correct_label, unique_id)
+
+
+####### PRED #####
+pred = np.random.rand(512, 512,2)
+#pred_tf = tf.convert_to_tensor(pred, dtype=tf.float32)
+#reshaped_pred = tf.reshape(pred_tf, [512*512, 2])
+
+#### Unsorted_segmente_sum pytorch
+'''
+index = torch.tensor([[0, 0, 1, 1, 0, 1],
+                      [1, 1, 0, 0, 1, 0]])
+data = torch.tensor([[5., 1., 7., 2., 3., 4.],
+                     [5., 1., 7., 2., 3., 4.]])
+
+torch.zeros(2, 2).scatter_add(1, index, data)
+> tensor([[  9.,  13.],
+          [ 13.,   9.]])
+
+'''
+
+
+
+
+
+
+
+
+aux=np.array([1,2,3,4,5])
+aux2=np.reshape(aux,(-1,1))
+
+#### Loss ####
+'''
+unique_labels, unique_id, counts = tf.unique_with_counts(instance_labels)
 counts = tf.cast(counts, tf.float32)
 num_instances = tf.size(unique_labels)
 
-
-segmented_sum = tf.unsorted_segment_sum(reshaped_pred, unique_id, num_instances)
-mu = tf.div(segmented_sum, tf.reshape(counts, (-1, 1)))
-mu_expand = tf.gather(mu, unique_id)
-
-
-unique = np.unique(valid_pred)
-
-
-instance_masks = get_instance_masks(valid_pred, bandwidth)
-
-print('ok')
+print(num_instances)
+'''
