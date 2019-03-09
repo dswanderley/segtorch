@@ -90,7 +90,6 @@ num_instances  = len(unique_labels)
 
 def unsorted_segment_sum(data, indexes):
 
-
     uid = np.unique(indexes)
     out = np.zeros(uid.shape)
 
@@ -100,7 +99,7 @@ def unsorted_segment_sum(data, indexes):
 
         idxs = np.zeros(indexes.shape)
         idxs[indexes == u] = 1
-        
+
         sum_id = np.sum(idxs.T.dot(data))
 
         out[i] = sum_id
@@ -108,7 +107,39 @@ def unsorted_segment_sum(data, indexes):
     return out
 
 
-ooo = unsorted_segment_sum(correct_label, unique_id)
+segmented_sum = unsorted_segment_sum(correct_label, unique_id)
+
+mu = np.divide(segmented_sum, counts)
+mu = np.reshape(mu, (len(mu),1))
+
+
+def gather_numpy(self, dim, index):
+    """
+    Gathers values along an axis specified by dim.
+    For a 3-D tensor the output is specified by:
+        out[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
+        out[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
+        out[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
+
+    :param dim: The axis along which to index
+    :param index: A tensor of indices of elements to gather
+    :return: tensor of gathered values
+    """
+    idx_xsection_shape = index.shape[:dim] + index.shape[dim + 1:]
+    self_xsection_shape = self.shape[:dim] + self.shape[dim + 1:]
+    if idx_xsection_shape != self_xsection_shape:
+        raise ValueError("Except for dimension " + str(dim) +
+                         ", all dimensions of index and self should be the same size")
+    if index.dtype != np.dtype('int_'):
+        raise TypeError("The values of index must be integers")
+    data_swaped = np.swapaxes(self, 0, dim)
+    index_swaped = np.swapaxes(index, 0, dim)
+    gathered = np.choose(index_swaped, data_swaped)
+    return np.swapaxes(gathered, 0, dim)
+
+
+mu_expand = gather_numpy(mu, 0, unique_id.astype(int))
+
 
 
 ####### PRED #####
