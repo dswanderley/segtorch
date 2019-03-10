@@ -41,7 +41,7 @@ def calculate_means(pred, gt, n_objects, max_n_objects):
     gt_expanded = gt.unsqueeze(3)
 
     pred_masked = pred_repeated * gt_expanded
-    
+
     means = []
     for i in range(bs):
         _n_objects_sample = n_objects[i]
@@ -73,7 +73,7 @@ img_gt = Image.open(path_gt)
 img_gt.load()
 
 data_gt = np.asarray(img_gt, dtype="float32") / 255.
-#data_gt = data_gt[...,1]
+data_gt = data_gt[...,1]
 
 inst_mask, num_inst = ndi.label(data_gt)
 gt = torch.from_numpy(inst_mask)
@@ -95,6 +95,7 @@ pred = torch.rand(1,512*512,2)
 cluster_means = calculate_means(pred, target, [4], 20)
 
 
+print(cluster_means)
 
 """
 
