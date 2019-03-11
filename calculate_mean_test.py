@@ -10,6 +10,8 @@ from torch.autograd import Variable
 
 
 n_features = 2
+delta_v = 0.5
+delta_d = 1.5
 
 # Load Image GT
 path_gt ='cluster/gt.png'
@@ -43,4 +45,16 @@ segmented_sum = torch.zeros(n_features, num_instances).scatter_add(1, unique_id,
 # Mean of each instance in each feature layer
 mu = torch.div(segmented_sum, counts)
 # Mean of the instance at each expected position for that instance
-mu_expander = torch.gather(mu, 1, unique_id)
+mu_expand = torch.gather(mu, 1, unique_id)
+
+
+''' l_var '''
+distance = mu_expand - reshaped_pred
+distance = torch.norm(distance, dim=0) - delta_v
+distance = torch.clamp(distance, 0., distance.max())**2
+distance.reshape(1,len(distance))
+print(distance)
+
+l_var = torch.zeros(1, num_instances).scatter_add(1, unique_id[0].reshape(1, height*width), distance.reshape(1, height*width)) 
+lvar = torch.cumsum(l_var/ counts[0], dim=0) / num_instances
+print(l_var)
