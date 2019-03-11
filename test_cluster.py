@@ -95,19 +95,44 @@ pred = torch.rand(1,512*512,2)
 cluster_means = calculate_means(pred, target, [4], 20)
 
 
+
+#########################
+correct_label = gt.unsqueeze_(0).view(1, height * width).type(torch.float32)
+correct_label = correct_label  / correct_label.max()
+correct_label.long()
+
+reshaped_pred = pred[0,...]#.long()
+
+# Count instances
+unique_id = correct_label.reshape(correct_label.shape[1], correct_label.shape[0])
+unique_labels = torch.unique(correct_label, sorted=True)
+num_instances  = len(unique_labels)
+counts = torch.histc(correct_label[0,:], bins=num_instances, min=0, max=1)
+#counts = np.reshape(counts, (len(counts),1)).astype(float)
+
+def unsorted_segment_sum(data, indexes):
+
+    uid = torch.unique(indexes, sorted=True)
+    cols = uid.shape[0]
+    rows = data.shape[0]
+    out = torch.zeros(rows, cols)
+
+    for j in range(cols):
+
+        aux = (indexes == uid[j]).float()
+        out[:,j] = torch.sum(aux[:,0] * data, dim=1)
+
+    return out
+
+data = reshaped_pred.reshape(reshaped_pred.shape[1], reshaped_pred.shape[0])
+index = unique_id.repeat(1,2)
+index = index.reshape(index.shape[1], index.shape[0])
+
+segmented_sum = unsorted_segment_sum(data, unique_id) # n_features, height x width
+#segmented_sum = torch.zeros(num_instances, 2).scatter_add(1, index.long(), data)
+
+mu = torch.div(segmented_sum, counts)
+########################
+
+#torch.gather(mu, 0, torch.LongTensor(2,512*512).random_(0, 5))
 print(cluster_means)
-
-"""
-
-#path_pred ='cluster/pred.png'
-img_pred = Image.open(path_pred)
-img_pred.load()
-
-data_pred = np.asarray(img_pred, dtype="float32") / 255.
-data_pred = data_pred[...,1]
-
-h, w, feature_dim = data_pred.shape
-
-num_clusters, labels, cluster_centers = cluster(data_pred.reshape([h*w, feature_dim]), bandwidth)
-
-"""
