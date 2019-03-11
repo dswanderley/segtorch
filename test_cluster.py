@@ -129,10 +129,22 @@ index = unique_id.repeat(1,2)
 index = index.reshape(index.shape[1], index.shape[0])
 
 segmented_sum = unsorted_segment_sum(data, unique_id) # n_features, height x width
-#segmented_sum = torch.zeros(num_instances, 2).scatter_add(1, index.long(), data)
+#segmented_sum_2 = torch.zeros(num_instances, 2).scatter_add(1, index.long(), data)
 
 mu = torch.div(segmented_sum, counts)
-########################
 
-#torch.gather(mu, 0, torch.LongTensor(2,512*512).random_(0, 5))
+#######################################
+idx = torch.LongTensor(512*512,2).random_(0, 5)
+src = torch.rand(5,2)
+
+#idx = torch.LongTensor(2,3).random_(0, 3)
+#src = torch.rand(100,3)
+
+aux=torch.gather(src, 0, idx)
+
+idx_ = torch.LongTensor(2,512*512).random_(0, 5)
+data_ = torch.rand(2,512*512)
+segmented_sum_2 = torch.zeros(2, 5).scatter_add(1, idx_, data_)
+
+
 print(cluster_means)
