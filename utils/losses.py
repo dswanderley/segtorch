@@ -81,7 +81,7 @@ class DiscriminativeLoss(nn.Module):
         self.delta_d = delta_d
 
     
-        def _sort_instances():
+    def _sort_instances():
 
         return ''
 
