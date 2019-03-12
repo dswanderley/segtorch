@@ -102,7 +102,7 @@ class DiscriminativeLoss(nn.Module):
         return num_instances, counts, unique_id, mu
 
     
-    def _variance_term(self, mu, num_instances, unique_id, reshaped_pred):
+    def _variance_term(self, mu, num_instances, unique_id, counts, reshaped_pred):
         ''' l_var  - intra-cluster distance '''
 
         # Mean of the instance at each expected position for that instance
@@ -115,7 +115,7 @@ class DiscriminativeLoss(nn.Module):
         distance.reshape(1,len(distance))
 
         l_var = torch.zeros(1, num_instances).scatter_add(1, unique_id[0].reshape(1, self.height * self.width), distance.reshape(1, self.height * self.width))
-        l_var = l_var / counts[0]
+        l_var = l_var / counts
         l_var = l_var.sum() / num_instances
         print(l_var)
 
@@ -157,7 +157,7 @@ class DiscriminativeLoss(nn.Module):
     def _discriminative_loss(self, pred, tgt):
 
         # Adjust data - CHECK IF NECESSARY
-        correct_label = tgt.unsqueeze_(0).view(1, height * width)
+        correct_label = tgt.unsqueeze_(0).view(1, self.height * self.width)
         correct_label.long()
 
         # Prediction
@@ -165,10 +165,10 @@ class DiscriminativeLoss(nn.Module):
         reshaped_pred = pred.reshape(self.n_features, self.height*self.width)
 
         # Count instances
-        num_instances, counts, unique_id = self._sort_instances(correct_label)
+        num_instances, counts, unique_id, mu = self._sort_instances(correct_label, reshaped_pred)
         
         # Variance term
-        l_var = self._variance_term(mu, num_instances, unique_id, reshaped_pred)
+        l_var = self._variance_term(mu, num_instances, unique_id, counts[0], reshaped_pred)
         # Distance term
         l_dist = self._distance_term(mu, num_instances)
         # Regularization term
