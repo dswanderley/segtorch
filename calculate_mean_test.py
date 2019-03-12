@@ -48,13 +48,36 @@ mu = torch.div(segmented_sum, counts)
 mu_expand = torch.gather(mu, 1, unique_id)
 
 
-''' l_var '''
-distance = mu_expand - reshaped_pred
-distance = torch.norm(distance, dim=0) - delta_v
-distance = torch.clamp(distance, 0., distance.max())**2
-distance.reshape(1,len(distance))
-print(distance)
+''' l_var  - intra-cluster distance '''
 
-l_var = torch.zeros(1, num_instances).scatter_add(1, unique_id[0].reshape(1, height*width), distance.reshape(1, height*width)) 
-lvar = torch.cumsum(l_var/ counts[0], dim=0) / num_instances
+# Calculate intra distance
+distance = mu_expand - reshaped_pred
+distance = torch.norm(distance, dim=0) - delta_v    # apply delta_v
+distance = torch.clamp(distance, 0., distance.max())**2 # max(0,x)
+distance.reshape(1,len(distance))
+
+l_var = torch.zeros(1, num_instances).scatter_add(1, unique_id[0].reshape(1, height*width), distance.reshape(1, height*width))
+l_var = l_var / counts[0]
+l_var = l_var.sum() / num_instances
 print(l_var)
+
+
+''' l_dist - inter-cluster distance'''
+
+# Calculate inter distance
+mu_sdim = mu.reshape(mu.shape[1]*mu.shape[0]) # reshape to apply meshgrid
+mu_x, mu_y = torch.meshgrid(mu_sdim, mu_sdim)
+aux_x = mu_x[:,:num_instances].reshape(n_features, num_instances, num_instances).permute(1,2,0)
+aux_y = mu_y[:num_instances, :].reshape(num_instances, n_features, num_instances).permute(0,2,1)
+# Calculate differece interclasses
+mu_diff = aux_x - aux_y
+mu_diff = torch.norm(mu_diff,dim=2)
+# Use a matrix with delt_d to calculate each difference
+aux_delta_d = 2 * delta_d * (torch.ones(mu_diff.shape) - torch.eye(mu_diff.shape[0])) # ignore diagonal (C_a = C_b)
+l_dist = aux_delta_d - mu_diff
+l_dist = torch.clamp(l_dist, 0., l_dist.max())**2 # max(0,x)
+# sum / C(C-1)
+l_dist = l_dist.sum() / num_instances / (num_instances - 1)
+
+print(l_dist)
+print('')
