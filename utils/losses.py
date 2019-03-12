@@ -85,7 +85,7 @@ class DiscriminativeLoss(nn.Module):
         self.gamma = gamma
     
 
-    def _sort_instances(correct_label, reshaped_pred):
+    def _sort_instances(self, correct_label, reshaped_pred):
         
         # Count instances
         unique_labels = torch.unique(correct_label, sorted=True) # instances labels (including background = 0)
@@ -102,7 +102,7 @@ class DiscriminativeLoss(nn.Module):
         return num_instances, counts, unique_id, mu
 
     
-    def _variance_term(mu, num_instances, unique_id, reshaped_pred):
+    def _variance_term(self, mu, num_instances, unique_id, reshaped_pred):
         ''' l_var  - intra-cluster distance '''
 
         # Mean of the instance at each expected position for that instance
@@ -122,7 +122,7 @@ class DiscriminativeLoss(nn.Module):
         return l_var
         
     
-    def _distance_term(mu, num_instances):
+    def _distance_term(self, mu, num_instances):
         ''' l_dist - inter-cluster distance'''
 
         # Calculate inter distance
@@ -144,7 +144,7 @@ class DiscriminativeLoss(nn.Module):
         return l_dist
 
 
-    def _regularization_term(mu, num_instances):
+    def _regularization_term(self, mu, num_instances):
         ''' l_reg - regularization term '''
 
         l_reg = torch.norm(mu, dim=0)   # norm
@@ -154,7 +154,7 @@ class DiscriminativeLoss(nn.Module):
         return l_reg
 
 
-    def _discriminative_loss(pred, tgt):
+    def _discriminative_loss(self, pred, tgt):
 
         # Adjust data - CHECK IF NECESSARY
         correct_label = tgt.unsqueeze_(0).view(1, height * width)
@@ -168,11 +168,11 @@ class DiscriminativeLoss(nn.Module):
         num_instances, counts, unique_id = self._sort_instances(correct_label)
         
         # Variance term
-        l_var = variance_term(mu, num_instances, unique_id, reshaped_pred)
+        l_var = self._variance_term(mu, num_instances, unique_id, reshaped_pred)
         # Distance term
-        l_dist = _distance_term(mu, num_instances)
+        l_dist = self._distance_term(mu, num_instances)
         # Regularization term
-        l_reg = _regularization_term(mu, num_instances)
+        l_reg = self._regularization_term(mu, num_instances)
 
         # Loss
         loss = self.alpha * l_var + self.beta *  l_dist + self.gamma * l_reg
