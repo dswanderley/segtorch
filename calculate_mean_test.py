@@ -9,7 +9,7 @@ import torch
 from torch.autograd import Variable
 
 
-n_features = 2
+n_features = 6
 delta_v = 0.5
 delta_d = 1.5
 
@@ -31,7 +31,7 @@ correct_label.long()
 
 # Prediction
 pred = torch.rand(1, height*width, n_features)
-reshaped_pred = pred.reshape(2, height*width)
+reshaped_pred = pred.reshape(n_features, height*width)
 
 # Count instances
 unique_labels = torch.unique(correct_label, sorted=True) # instances labels (including background = 0)
@@ -67,11 +67,11 @@ print(l_var)
 # Calculate inter distance
 mu_sdim = mu.reshape(mu.shape[1]*mu.shape[0]) # reshape to apply meshgrid
 mu_x, mu_y = torch.meshgrid(mu_sdim, mu_sdim)
-aux_x = mu_x[:,:num_instances].reshape(n_features, num_instances, num_instances).permute(1,2,0)
-aux_y = mu_y[:num_instances, :].reshape(num_instances, n_features, num_instances).permute(0,2,1)
+aux_x = mu_x[:,:num_instances].reshape(n_features, num_instances, num_instances)#.permute(1,2,0)
+aux_y = mu_y[:num_instances, :].reshape(num_instances, n_features, num_instances).permute(1,0,2)
 # Calculate differece interclasses
 mu_diff = aux_x - aux_y
-mu_diff = torch.norm(mu_diff,dim=2)
+mu_diff = torch.norm(mu_diff,dim=0)
 # Use a matrix with delt_d to calculate each difference
 aux_delta_d = 2 * delta_d * (torch.ones(mu_diff.shape) - torch.eye(mu_diff.shape[0])) # ignore diagonal (C_a = C_b)
 l_dist = aux_delta_d - mu_diff
