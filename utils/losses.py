@@ -193,7 +193,7 @@ class DiscriminativeLoss(nn.Module):
 
         for i in range(self.batch_size):
 
-            pred = pred[i,...]
+            pred = prediction[i,...]
             tgt = target[i,...]
 
             loss, l_var, l_dist, l_reg = self._discriminative_loss(pred, tgt)
