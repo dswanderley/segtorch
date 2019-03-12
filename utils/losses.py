@@ -67,3 +67,42 @@ class DiceCoefficients(nn.Module):
             dsc.append((2. * intersection + SMOOTH) / (union + SMOOTH))
 
         return dsc
+
+
+class DiscriminativeLoss(nn.Module):
+    """
+        Discriminative Loss function
+    """
+    def __init__(self, n_features, delta_v=0.5, delta_d=1.5):
+        super(DiscriminativeLoss, self).__init__()
+        
+        self.num_features = n_features
+        self.delta_v = delta_v 
+        self.delta_d = delta_d
+
+    
+        def _sort_instances():
+
+        return ''
+
+    
+    def _variance_term():
+
+        return ''
+        
+    
+    def _distance_term():
+
+        return ''
+
+
+    def _regularization_term(mu):
+
+        return ''
+
+
+    def forward(self, pred, target):
+
+
+
+        return super().forward(*input)
