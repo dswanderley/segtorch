@@ -78,6 +78,13 @@ l_dist = aux_delta_d - mu_diff
 l_dist = torch.clamp(l_dist, 0., l_dist.max())**2 # max(0,x)
 # sum / C(C-1)
 l_dist = l_dist.sum() / num_instances / (num_instances - 1)
-
 print(l_dist)
+
+
+''' l_reg - regularization term '''
+
+l_reg = torch.norm(mu, dim=0)   # norm
+l_reg = l_reg.sum() / num_instances # sum and divide
+print(l_reg)
+
 print('')
