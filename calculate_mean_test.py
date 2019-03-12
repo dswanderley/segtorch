@@ -87,4 +87,15 @@ l_reg = torch.norm(mu, dim=0)   # norm
 l_reg = l_reg.sum() / num_instances # sum and divide
 print(l_reg)
 
+
+''' Loss '''
+
+alpha = 1.
+beta = 1.
+gamma = 0.001
+
+loss = alpha * l_var + beta *  l_dist + gamma * l_reg
+print(loss)
+
 print('')
+
