@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{87e324df-3010-4c36-b9d8-a41db46b4973}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>calculate_mean_test.py</StartupFile>
+    <StartupFile>main.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -20,7 +20,6 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="calculate_mean_test.py" />
     <Compile Include="main.py" />
     <Compile Include="predict.py" />
     <Compile Include="utils\logger.py">
