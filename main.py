@@ -20,7 +20,7 @@ from torch import optim
 from utils.logger import Logger
 from nets.unet import Unet2
 from utils.datasets import OvaryDataset
-from utils.losses import DiceLoss
+from utils.losses import DiceLoss, DiscriminativeLoss
 from train import Training
 from predict import Inference
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     # Training Parameters
     optmizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0005)
-    loss_function = DiceLoss() # nn.CrossEntropyLoss()
+    loss_function = DiscriminativeLoss(n_features=2) #DiceLoss() # nn.CrossEntropyLoss()
 
     # Run training
     training = Training(model, device, dataset_train, dataset_val,
