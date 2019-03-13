@@ -55,7 +55,8 @@ class Training:
         for batch_idx, sample in enumerate(data_loader_train):
             # Load data
             image = sample['image']
-            gt_mask = sample['follicle_instances'] #'gt_mask']
+            #gt_mask = sample['gt_mask'] 
+            gt_mask = sample['follicle_instances']
             # Active GPU train
             if torch.cuda.is_available():
                 self.model = self.model.to(self.device)
@@ -84,7 +85,10 @@ class Training:
                 ref_pred_train = pred_masks[0,...]
 
             # Calculate loss for each batch
+            #loss = self.criterion(pred_masks, groundtruth)
+            print(pred_masks)
             loss = self.criterion(pred_masks, groundtruth)
+            print(loss)
             loss_train_sum += len(image) * loss.item()
 
             # Update weights

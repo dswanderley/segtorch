@@ -18,7 +18,7 @@ import utils.transformations as tsfrm
 
 from torch import optim
 from utils.logger import Logger
-from nets.unet import Unet2
+from nets.unet import InstSegNet, Unet2
 from utils.datasets import OvaryDataset
 from utils.losses import DiceLoss, DiscriminativeLoss
 from train import Training
@@ -54,8 +54,10 @@ if __name__ == '__main__':
     logger = Logger('./logs/' + train_name + '/')
 
     # Load Unet
-    model = Unet2(n_channels=1, n_classes=[3,2])
-    #print(net)
+    n_features = 2
+    #model = Unet2(n_channels=1, n_classes=3) 
+    model = InstSegNet(n_channels=1, n_features=n_features)
+    print(model)
 
     # Load CUDA if exist
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -72,7 +74,8 @@ if __name__ == '__main__':
 
     # Training Parameters
     optmizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0005)
-    loss_function = DiscriminativeLoss(n_features=2) #DiceLoss() # nn.CrossEntropyLoss()
+    #loss_function = DiceLoss()
+    loss_function = DiscriminativeLoss(n_features=n_features)
 
     # Run training
     training = Training(model, device, dataset_train, dataset_val,
