@@ -114,9 +114,10 @@ class DiscriminativeLoss(nn.Module):
         
         l_var = torch.zeros(1, num_instances).scatter_add_(1, unique_id[0].reshape(1, self.height * self.width), distance.reshape(1, self.height * self.width))
         l_var /= counts / num_instances
-        l_var.sum() 
+        print(id(l_var))
+        #print(l_var)
 
-        return l_var
+        return l_var.sum()
         
     
     def _distance_term(self, mu, num_instances):
@@ -134,25 +135,20 @@ class DiscriminativeLoss(nn.Module):
         aux_delta_d = 2 * self.delta_d * (torch.ones(mu_diff.shape) - torch.eye(mu_diff.shape[0])) # ignore diagonal (C_a = C_b)
         aux_delta_d = Variable(aux_delta_d)
         l_dist = torch.clamp(aux_delta_d - mu_diff, 0., 10000)**2 # max(0,x)
-        print(id(l_dist))
-        # sum / C(C-1)
+        # 1 / C(C-1)
         l_dist /= num_instances / (num_instances - 1)
-        print(id(l_dist))
-        l_dist.sum() 
-        print(id(l_dist))
         #print(l_dist)
 
-        return l_dist
+        return l_dist.sum() 
 
 
     def _regularization_term(self, mu, num_instances):
         ''' l_reg - regularization term '''
 
-        l_reg = torch.norm(mu, dim=0)   # norm
-        l_reg = l_reg.sum() / num_instances # sum and divide
+        l_reg = torch.norm(mu, dim=0) / num_instances
         #print(l_reg)
         
-        return l_reg
+        return l_reg.sum()
 
 
     def _discriminative_loss(self, pred, tgt):
@@ -169,6 +165,7 @@ class DiscriminativeLoss(nn.Module):
         
         # Variance term
         l_var = self._variance_term(mu, num_instances, unique_id, counts[0], reshaped_pred)
+        print(id(l_var))
         # Distance term
         l_dist = self._distance_term(mu, num_instances)
         # Regularization term
