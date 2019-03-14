@@ -55,9 +55,9 @@ if __name__ == '__main__':
 
     # Load Unet
     n_features = 2
-    #model = Unet2(n_channels=1, n_classes=3) 
+    #model = Unet2(n_channels=1, n_classes=3)
     model = InstSegNet(n_channels=1, n_features=n_features)
-    print(model)
+    #print(model)
 
     # Load CUDA if exist
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

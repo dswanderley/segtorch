@@ -76,24 +76,24 @@ class DiscriminativeLoss(nn.Module):
     """
     def __init__(self, n_features, delta_v=0.5, delta_d=1.5, alpha = 1., beta = 1., gamma = 0.001):
         super(DiscriminativeLoss, self).__init__()
-        
+
         self.n_features = n_features
-        self.delta_v = delta_v 
+        self.delta_v = delta_v
         self.delta_d = delta_d
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
-    
+
 
     def _sort_instances(self, correct_label, reshaped_pred):
-        
+
         # Count instances
         unique_labels = torch.unique(correct_label, sorted=True) # instances labels (including background = 0)
         num_instances  = len(unique_labels) # number of instances (including background)
         counts = torch.histc(correct_label.float(), bins=num_instances, min=0, max=num_instances-1)
         counts = counts.expand(self.n_features, num_instances)   # expected amount of pixel for each instance
         unique_id = correct_label.expand(self.n_features, self.height * self.width).long() # expected index of each pixel
-        
+
          # Get sum by instance
         segmented_sum = torch.zeros(self.n_features, num_instances).scatter_add_(1, unique_id, reshaped_pred)
         # Mean of each instance in each feature layer
@@ -109,46 +109,49 @@ class DiscriminativeLoss(nn.Module):
         mu_expand = torch.gather(mu, 1, unique_id)
 
         # Calculate intra distance
-        distance = torch.clamp(torch.norm(mu_expand - reshaped_pred, dim=0) - self.delta_v, 0., 10000)**2 # max(0,x)   # apply delta_v
+        distance = torch.clamp(torch.norm(mu_expand - reshaped_pred, \
+            dim=0) - self.delta_v, 0., 10000)**2 # max(0,x)   # apply delta_v
         distance.reshape(1,len(distance)).contiguous()
-        
-        l_var = torch.zeros(1, num_instances).scatter_add_(1, unique_id[0].reshape(1, self.height * self.width), distance.reshape(1, self.height * self.width))
-        l_var /= counts / num_instances
-        print(id(l_var))
+
+        l_var = (torch.zeros(1, num_instances).scatter_add_(1, \
+            unique_id[0].reshape(1, self.height * self.width), \
+                distance.reshape(1, self.height * self.width)) \
+                    / counts / num_instances).sum()
         #print(l_var)
 
-        return l_var.sum()
-        
-    
+        return l_var
+
+
     def _distance_term(self, mu, num_instances):
         ''' l_dist - inter-cluster distance'''
 
         # Calculate inter distance
-        mu_sdim = mu.reshape(mu.shape[1] * mu.shape[0]) # reshape to apply meshgrid
+        mu_sdim = mu.view(-1) #reshape(mu.shape[1] * mu.shape[0]) # reshape to apply meshgrid
         mu_x, mu_y = torch.meshgrid(mu_sdim, mu_sdim)
-        aux_x = mu_x[:,:num_instances].reshape(self.n_features, num_instances, num_instances)
-        aux_y = mu_y[:num_instances, :].reshape(num_instances, self.n_features, num_instances).permute(1,0,2)
+        mu_x = mu_x[:,:num_instances].clone()
+        mu_x.reshape(self.n_features, num_instances, num_instances)
+        mu_y = mu_y[:num_instances, :].clone().reshape(num_instances, \
+            self.n_features, num_instances).permute(1,0,2)
         # Calculate differece interclasses
-        mu_diff = aux_x - aux_y
-        mu_diff = torch.norm(mu_diff,dim=0)
+        mu_diff = torch.norm(mu_x - mu_y, dim=0)
         # Use a matrix with delt_d to calculate each difference
-        aux_delta_d = 2 * self.delta_d * (torch.ones(mu_diff.shape) - torch.eye(mu_diff.shape[0])) # ignore diagonal (C_a = C_b)
-        aux_delta_d = Variable(aux_delta_d)
-        l_dist = torch.clamp(aux_delta_d - mu_diff, 0., 10000)**2 # max(0,x)
+        aux_delta_d = Variable(2 * self.delta_d * \
+            (torch.ones(mu_diff.shape) - torch.eye(mu_diff.shape[0]))) # ignore diagonal (C_a = C_b)
+        l_dist = (torch.clamp(aux_delta_d - mu_diff, 0., 10000)**2).sum() # max(0,x)
         # 1 / C(C-1)
         l_dist /= num_instances / (num_instances - 1)
         #print(l_dist)
 
-        return l_dist.sum() 
+        return l_dist
 
 
     def _regularization_term(self, mu, num_instances):
         ''' l_reg - regularization term '''
 
-        l_reg = torch.norm(mu, dim=0) / num_instances
+        l_reg = (torch.norm(mu, dim=0) / num_instances).sum()
         #print(l_reg)
-        
-        return l_reg.sum()
+
+        return l_reg
 
 
     def _discriminative_loss(self, pred, tgt):
@@ -162,10 +165,9 @@ class DiscriminativeLoss(nn.Module):
 
         # Count instances
         num_instances, counts, unique_id, mu = self._sort_instances(correct_label, reshaped_pred)
-        
+
         # Variance term
         l_var = self._variance_term(mu, num_instances, unique_id, counts[0], reshaped_pred)
-        print(id(l_var))
         # Distance term
         l_dist = self._distance_term(mu, num_instances)
         # Regularization term
@@ -196,6 +198,5 @@ class DiscriminativeLoss(nn.Module):
 
         out_loss = torch.stack(loss_list)
         out_loss = torch.sum(out_loss)
-                        
+
         return  out_loss
-                

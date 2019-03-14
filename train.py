@@ -55,7 +55,7 @@ class Training:
         for batch_idx, sample in enumerate(data_loader_train):
             # Load data
             image = sample['image']
-            #gt_mask = sample['gt_mask'] 
+            #gt_mask = sample['gt_mask']
             gt_mask = sample['follicle_instances']
             # Active GPU train
             if torch.cuda.is_available():
