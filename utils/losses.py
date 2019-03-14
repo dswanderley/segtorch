@@ -90,8 +90,8 @@ class DiscriminativeLoss(nn.Module):
         # Count instances
         unique_labels = torch.unique(correct_label, sorted=True) # instances labels (including background = 0)
         num_instances  = len(unique_labels) # number of instances (including background)
-        counts = torch.histc(correct_label.float(), bins=num_instances, min=0, max=num_instances-1)
-        counts = counts.expand(self.n_features, num_instances)   # expected amount of pixel for each instance
+        counts = torch.histc(correct_label.float(), bins=num_instances, min=0, max=num_instances-1).expand(self.n_features, num_instances)
+        #counts = counts.expand(self.n_features, num_instances)   # expected amount of pixel for each instance
         unique_id = correct_label.expand(self.n_features, self.height * self.width).long() # expected index of each pixel
 
          # Get sum by instance
@@ -100,6 +100,32 @@ class DiscriminativeLoss(nn.Module):
         mu = torch.div(segmented_sum, counts)
 
         return num_instances, counts, unique_id, mu
+
+
+    def _calc_means(self, pred, gt, n_objects):
+
+        pred.transpose_(0,1)
+        pred.unsqueeze_(0)
+        
+        unique_labels = torch.unique(gt, sorted=True) # instances labels (including background = 0)
+        #print(torch.clamp(unique_labels, -1, 1))
+        bs, n_loc, n_filters = pred.size()
+        n_instances = n_objects
+
+        pred_repeated = pred.unsqueeze(2).expand(bs, n_loc, n_instances, n_filters)  # bs, n_loc, n_instances, n_filters
+
+        imasks = torch.zeros(bs, n_loc, n_instances)
+        for i in range(len(unique_labels)):
+            imasks[...,i] = torch.where(gt == unique_labels[i], torch.ones(gt.shape), torch.zeros(gt.shape))
+        
+        # bs, n_loc, n_instances, 1
+        imasks.unsqueeze_(3)
+
+        pred_masked = pred_repeated * imasks
+
+        print(pred_masked)
+
+        return pred_masked.sum()
 
 
     def _variance_term(self, mu, num_instances, unique_id, counts, reshaped_pred):
@@ -128,10 +154,8 @@ class DiscriminativeLoss(nn.Module):
         # Calculate inter distance
         mu_sdim = mu.view(-1) #reshape(mu.shape[1] * mu.shape[0]) # reshape to apply meshgrid
         mu_x, mu_y = torch.meshgrid(mu_sdim, mu_sdim)
-        mu_x = mu_x[:,:num_instances].clone()
-        mu_x.reshape(self.n_features, num_instances, num_instances)
-        mu_y = mu_y[:num_instances, :].clone().reshape(num_instances, \
-            self.n_features, num_instances).permute(1,0,2)
+        mu_x = mu_x[:,:num_instances].clone().reshape(self.n_features, num_instances, num_instances)
+        mu_y = mu_y[:num_instances, :].clone().reshape(num_instances, self.n_features, num_instances).permute(1,0,2)
         # Calculate differece interclasses
         mu_diff = torch.norm(mu_x - mu_y, dim=0)
         # Use a matrix with delt_d to calculate each difference
@@ -174,7 +198,8 @@ class DiscriminativeLoss(nn.Module):
         l_reg = self._regularization_term(mu, num_instances)
 
         # Loss
-        loss = self.alpha * l_var + self.beta *  l_dist + self.gamma * l_reg
+        #loss = self.alpha * l_var #+ self.beta *  l_dist + self.gamma * l_reg
+        loss = self._calc_means(reshaped_pred, correct_label, 5)
         #print(loss)
 
         return loss, l_var, l_dist, l_reg
