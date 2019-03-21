@@ -85,25 +85,8 @@ class DiscriminativeLoss(nn.Module):
         self.gamma = gamma
 
 
-    def _sort_instances(self, correct_label, reshaped_pred):
+    def _sort_instances(self, pred, gt):
 
-        # Count instances
-        unique_labels = torch.unique(correct_label, sorted=True) # instances labels (including background = 0)
-        num_instances  = len(unique_labels) # number of instances (including background)
-        counts = torch.histc(correct_label.float(), bins=num_instances, min=0, max=num_instances-1).expand(self.n_features, num_instances)
-        #counts = counts.expand(self.n_features, num_instances)   # expected amount of pixel for each instance
-        unique_id = correct_label.expand(self.n_features, self.height * self.width).long() # expected index of each pixel
-
-         # Get sum by instance
-        segmented_sum = torch.zeros(self.n_features, num_instances).scatter_add_(1, unique_id, reshaped_pred)
-        # Mean of each instance in each feature layer
-        mu = torch.div(segmented_sum, counts)
-
-        return num_instances, counts, unique_id, mu
-
-
-    def _calc_means(self, pred, gt):
-        
         # Get unic labesl from 0 to max (n_instances-1)
         unique_labels = torch.unique(gt, sorted=True) # instances labels (including background = 0)
         # Get data dimensions
@@ -119,30 +102,25 @@ class DiscriminativeLoss(nn.Module):
         # Reshape and expand (repeat) to the number of features
         imasks.unsqueeze_(0) # 1, n_loc, n_instances
         
-        # Calculate correspondence map of prediction
-        pred_masked = pred_repeated * imasks
-        # Calculate means
-        means = torch.div(pred_masked.sum(1), imasks.sum(1))
-        
-        return means.sum()
+        return pred_repeated, imasks, n_instances
+    
 
-
-    def _variance_term(self, mu, num_instances, unique_id, counts, reshaped_pred):
+    def _variance_term(self, mu, x, gt):
         ''' l_var  - intra-cluster distance '''
 
+        # Count pixels of each instance
+        counts = torch.sum(gt, dim=1)
+        _, C = counts.shape # number of clusterss
+        
         # Mean of the instance at each expected position for that instance
-        mu_expand = torch.gather(mu, 1, unique_id)
-
+        mu_expand = mu.unsqueeze_(1).expand(x.shape) * gt
+        
         # Calculate intra distance
-        distance = torch.clamp(torch.norm(mu_expand - reshaped_pred, \
-            dim=0) - self.delta_v, 0., 10000)**2 # max(0,x)   # apply delta_v
-        distance.reshape(1,len(distance)).contiguous()
+        diff = torch.norm(mu_expand - x, dim=0)
+        distance = torch.clamp(diff - self.delta_v, 0., 100000.)**2
 
-        l_var = (torch.zeros(1, num_instances).scatter_add_(1, \
-            unique_id[0].reshape(1, self.height * self.width), \
-                distance.reshape(1, self.height * self.width)) \
-                    / counts / num_instances).sum()
-        #print(l_var)
+        # variance
+        l_var = torch.sum(torch.div(torch.sum(distance), counts)) / C
 
         return l_var
 
@@ -187,18 +165,23 @@ class DiscriminativeLoss(nn.Module):
         reshaped_pred = pred.reshape(self.n_features, self.height*self.width).contiguous()
 
         # Count instances
-        num_instances, counts, unique_id, mu = self._sort_instances(correct_label, reshaped_pred)
+        pred_repeated, unique_id, num_instances = self._sort_instances(reshaped_pred, correct_label)
+
+        # Calculate correspondence map of prediction
+        pred_masked = pred_repeated * unique_id
+        # Calculate means
+        means = torch.div(pred_masked.sum(1), unique_id.sum(1))
 
         # Variance term
-        l_var = 0   #self._variance_term(mu, num_instances, unique_id, counts[0], reshaped_pred)
+        l_var = self._variance_term(means, pred_masked, unique_id)
         # Distance term
-        l_dist = 1  #self._distance_term(mu, num_instances)
+        l_dist = 1  #self._distance_term(means, num_instances)
         # Regularization term
-        l_reg = 2   #self._regularization_term(mu, num_instances)
+        l_reg = 2   #self._regularization_term(means, num_instances)
 
         # Loss
         #loss = self.alpha * l_var #+ self.beta *  l_dist + self.gamma * l_reg
-        loss = self._calc_means(reshaped_pred, correct_label)
+        loss = l_var.sum()
         #print(loss)
 
         return loss, l_var, l_dist, l_reg
