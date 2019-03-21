@@ -125,23 +125,24 @@ class DiscriminativeLoss(nn.Module):
         return l_var
 
 
-    def _distance_term(self, mu, num_instances):
+    def _distance_term(self, mu):
         ''' l_dist - inter-cluster distance'''
 
-        # Calculate inter distance
-        mu_sdim = mu.view(-1) #reshape(mu.shape[1] * mu.shape[0]) # reshape to apply meshgrid
-        mu_x, mu_y = torch.meshgrid(mu_sdim, mu_sdim)
-        mu_x = mu_x[:,:num_instances].clone().reshape(self.n_features, num_instances, num_instances)
-        mu_y = mu_y[:num_instances, :].clone().reshape(num_instances, self.n_features, num_instances).permute(1,0,2)
-        # Calculate differece interclasses
-        mu_diff = torch.norm(mu_x - mu_y, dim=0)
-        # Use a matrix with delt_d to calculate each difference
-        aux_delta_d = Variable(2 * self.delta_d * \
-            (torch.ones(mu_diff.shape) - torch.eye(mu_diff.shape[0]))) # ignore diagonal (C_a = C_b)
-        l_dist = (torch.clamp(aux_delta_d - mu_diff, 0., 10000)**2).sum() # max(0,x)
-        # 1 / C(C-1)
-        l_dist /= num_instances / (num_instances - 1)
-        #print(l_dist)
+        # number features and number of clusterss
+        nf, _, C = mu.shape
+
+        # Prepare data - meshgrid
+        means = mu.reshape(nf,C).permute(1, 0)
+        means_1 = means.unsqueeze(1).expand(C, C, nf)
+        means_2 = means_1.permute(1, 0, 2)
+        
+        # Calculate norm of distance
+        diff = means_1 - means_2 
+        norm = torch.norm(diff, dim=2)
+        margin = Variable(2 * self.delta_d * (1.0 - torch.eye(C))) # cluster radius
+
+        # calculate distance term
+        l_dist = torch.sum(torch.clamp(margin - norm, 0., 100000.)**2) / (C*(C-1))
 
         return l_dist
 
@@ -150,7 +151,6 @@ class DiscriminativeLoss(nn.Module):
         ''' l_reg - regularization term '''
 
         l_reg = (torch.norm(mu, dim=0) / num_instances).sum()
-        #print(l_reg)
 
         return l_reg
 
@@ -175,13 +175,12 @@ class DiscriminativeLoss(nn.Module):
         # Variance term
         l_var = self._variance_term(means, pred_masked, unique_id)
         # Distance term
-        l_dist = 1  #self._distance_term(means, num_instances)
+        l_dist = self._distance_term(means)
         # Regularization term
-        l_reg = 2   #self._regularization_term(means, num_instances)
+        l_reg = self._regularization_term(means, num_instances)
 
         # Loss
-        #loss = self.alpha * l_var #+ self.beta *  l_dist + self.gamma * l_reg
-        loss = l_var.sum()
+        loss = self.alpha * l_var #+ self.beta *  l_dist + self.gamma * l_reg
         #print(loss)
 
         return loss, l_var, l_dist, l_reg
