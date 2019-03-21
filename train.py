@@ -86,9 +86,7 @@ class Training:
 
             # Calculate loss for each batch
             #loss = self.criterion(pred_masks, groundtruth)
-            print(pred_masks)
             loss = self.criterion(pred_masks, groundtruth)
-            print(loss)
             loss_train_sum += len(image) * loss.item()
 
             # Update weights

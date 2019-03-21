@@ -180,8 +180,8 @@ class DiscriminativeLoss(nn.Module):
         l_reg = self._regularization_term(means, num_instances)
 
         # Loss
-        loss = self.alpha * l_var #+ self.beta *  l_dist + self.gamma * l_reg
-        #print(loss)
+        loss = self.alpha * l_var + self.beta *  l_dist + self.gamma * l_reg
+        print(loss)
 
         return loss, l_var, l_dist, l_reg
 
@@ -189,20 +189,19 @@ class DiscriminativeLoss(nn.Module):
     def forward(self, prediction, target):
 
         # Adjust data - CHECK IF NECESSARY
-        self.batch_size, self.height, self.width = target.shape
+        batch_size, self.height, self.width = target.shape
 
         loss_list = []
 
-        for i in range(self.batch_size):
+        for i in range(batch_size):
 
             pred = prediction[i,...].contiguous()
             tgt = target[i,...].contiguous()
             
             loss, l_var, l_dist, l_reg = self._discriminative_loss(pred, tgt)
             
-            loss_list.append(loss)
+            loss_list.append(loss / batch_size)
 
-        out_loss = torch.stack(loss_list)
-        out_loss = torch.sum(out_loss)
+        out_loss = torch.sum(torch.stack(loss_list))
 
         return  out_loss
