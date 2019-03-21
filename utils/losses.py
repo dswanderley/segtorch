@@ -117,12 +117,14 @@ class DiscriminativeLoss(nn.Module):
         for i in range(n_instances):
             imasks[...,i] = torch.where(gt == unique_labels[i], torch.ones(gt.shape), torch.zeros(gt.shape))
         # Reshape and expand (repeat) to the number of features
-        imasks.unsqueeze_(0).expand(n_filters, n_loc, n_instances) # n_feattures, n_loc, n_instances
+        imasks.unsqueeze_(0) # 1, n_loc, n_instances
         
         # Calculate correspondence map of prediction
         pred_masked = pred_repeated * imasks
+        # Calculate means
+        means = torch.div(pred_masked.sum(1), imasks.sum(1))
         
-        return pred_masked.sum()
+        return means.sum()
 
 
     def _variance_term(self, mu, num_instances, unique_id, counts, reshaped_pred):
