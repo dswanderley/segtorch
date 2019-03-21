@@ -102,29 +102,26 @@ class DiscriminativeLoss(nn.Module):
         return num_instances, counts, unique_id, mu
 
 
-    def _calc_means(self, pred, gt, n_objects):
-
-        pred.transpose_(0,1)
-        pred.unsqueeze_(0)
+    def _calc_means(self, pred, gt):
         
+        # Get unic labesl from 0 to max (n_instances-1)
         unique_labels = torch.unique(gt, sorted=True) # instances labels (including background = 0)
-        #print(torch.clamp(unique_labels, -1, 1))
-        bs, n_loc, n_filters = pred.size()
-        n_instances = n_objects
+        # Get data dimensions
+        n_instances = len(unique_labels)
+        n_filters, n_loc = pred.size()
+        # Reshape and expand (repeat) to the number of instances
+        pred_repeated = pred.unsqueeze(2).expand(n_filters, n_loc, n_instances).contiguous()  # n_filters, n_loc, n_instances
 
-        pred_repeated = pred.unsqueeze(2).expand(bs, n_loc, n_instances, n_filters)  # bs, n_loc, n_instances, n_filters
-
-        imasks = torch.zeros(bs, n_loc, n_instances)
-        for i in range(len(unique_labels)):
+        # Mask with instances, each depth is a instance
+        imasks = torch.zeros(n_loc, n_instances)
+        for i in range(n_instances):
             imasks[...,i] = torch.where(gt == unique_labels[i], torch.ones(gt.shape), torch.zeros(gt.shape))
+        # Reshape and expand (repeat) to the number of features
+        imasks.unsqueeze_(0).expand(n_filters, n_loc, n_instances) # n_feattures, n_loc, n_instances
         
-        # bs, n_loc, n_instances, 1
-        imasks.unsqueeze_(3)
-
+        # Calculate correspondence map of prediction
         pred_masked = pred_repeated * imasks
-
-        print(pred_masked)
-
+        
         return pred_masked.sum()
 
 
@@ -191,15 +188,15 @@ class DiscriminativeLoss(nn.Module):
         num_instances, counts, unique_id, mu = self._sort_instances(correct_label, reshaped_pred)
 
         # Variance term
-        l_var = self._variance_term(mu, num_instances, unique_id, counts[0], reshaped_pred)
+        l_var = 0   #self._variance_term(mu, num_instances, unique_id, counts[0], reshaped_pred)
         # Distance term
-        l_dist = self._distance_term(mu, num_instances)
+        l_dist = 1  #self._distance_term(mu, num_instances)
         # Regularization term
-        l_reg = self._regularization_term(mu, num_instances)
+        l_reg = 2   #self._regularization_term(mu, num_instances)
 
         # Loss
         #loss = self.alpha * l_var #+ self.beta *  l_dist + self.gamma * l_reg
-        loss = self._calc_means(reshaped_pred, correct_label, 5)
+        loss = self._calc_means(reshaped_pred, correct_label)
         #print(loss)
 
         return loss, l_var, l_dist, l_reg
@@ -216,9 +213,9 @@ class DiscriminativeLoss(nn.Module):
 
             pred = prediction[i,...].contiguous()
             tgt = target[i,...].contiguous()
-
+            
             loss, l_var, l_dist, l_reg = self._discriminative_loss(pred, tgt)
-
+            
             loss_list.append(loss)
 
         out_loss = torch.stack(loss_list)
