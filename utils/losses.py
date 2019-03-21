@@ -11,6 +11,11 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
+from PIL import Image
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
 class DiceLoss(nn.Module):
     '''
     Dice Loss (Ignore background - channel 0)
@@ -84,6 +89,32 @@ class DiscriminativeLoss(nn.Module):
         self.beta = beta
         self.gamma = gamma
 
+    def _plot(self, mean, data):
+        '''
+            Plot a scatter chart (print as png)
+        '''
+        COLOR = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+        
+        nf, pos, c = data.shape
+
+        mean_np = mean
+        mean_np = mean_np.detach().numpy()
+        
+        data_np = data
+        data_np = data_np.detach().numpy()
+        
+        area_ext = (math.pi * self.delta_d)**2
+        area_int = (math.pi * self.delta_v)**2
+
+        for i in range(1,c):
+            plt.scatter(data_np[0,:,i], data_np[1,:,i], c=COLOR[i], marker='.')
+            plt.scatter(mean_np[0,i], mean_np[1,i], c=COLOR[i], marker='X')
+            
+            plt.scatter(mean_np[0,i], mean_np[1,i], c='#555555', s=area_ext, alpha=0.1)
+            plt.scatter(mean_np[0,i], mean_np[1,i], c='#000000', s=area_int, alpha=0.1)
+
+        plt.savefig('foo.png')
+        plt.close()
 
     def _sort_instances(self, pred, gt):
 
@@ -155,7 +186,10 @@ class DiscriminativeLoss(nn.Module):
         return l_reg
 
 
-    def _discriminative_loss(self, pred, tgt):
+    def _discriminative_loss(self, pred, tgt, plot):
+        '''
+            Calculate discriminative loss function (l_var, l_dist, l_reg).
+        '''
 
         # Adjust data - CHECK IF NECESSARY
         correct_label = tgt.unsqueeze_(0).view(1, self.height * self.width)
@@ -172,6 +206,9 @@ class DiscriminativeLoss(nn.Module):
         # Calculate means
         means = torch.div(pred_masked.sum(1), unique_id.sum(1))
 
+        if plot:
+            self._plot(means, pred_masked)
+
         # Variance term
         l_var = self._variance_term(means, pred_masked, unique_id)
         # Distance term
@@ -181,12 +218,12 @@ class DiscriminativeLoss(nn.Module):
 
         # Loss
         loss = self.alpha * l_var + self.beta *  l_dist + self.gamma * l_reg
-        print(loss)
+        #print(loss)
 
         return loss, l_var, l_dist, l_reg
 
 
-    def forward(self, prediction, target):
+    def forward(self, prediction, target, plot=False):
 
         # Adjust data - CHECK IF NECESSARY
         batch_size, self.height, self.width = target.shape
@@ -198,7 +235,7 @@ class DiscriminativeLoss(nn.Module):
             pred = prediction[i,...].contiguous()
             tgt = target[i,...].contiguous()
             
-            loss, l_var, l_dist, l_reg = self._discriminative_loss(pred, tgt)
+            loss, l_var, l_dist, l_reg = self._discriminative_loss(pred, tgt, plot)
             
             loss_list.append(loss / batch_size)
 

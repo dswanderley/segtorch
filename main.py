@@ -68,7 +68,7 @@ if __name__ == '__main__':
                            tsfrm.RandomAffine(90, translate=(0.15, 0.15), scale=(0.75, 1.5), resample=3, fillcolor=0)
                            ])
     # Dataset definitions
-    dataset_train = OvaryDataset(im_dir='Dataset/im/train/', gt_dir='Dataset/gt/train/', transform=transform)
+    dataset_train = OvaryDataset(im_dir='Dataset/im/train/', gt_dir='Dataset/gt/train/', transform=False)
     dataset_val = OvaryDataset(im_dir='Dataset/im/val/', gt_dir='Dataset/gt/val/')
     dataset_test = OvaryDataset(im_dir='Dataset/im/test/', gt_dir='Dataset/gt/test/')
 
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     # Run training
     training = Training(model, device, dataset_train, dataset_val,
                         optmizer, loss_function, logger = logger, train_name=train_name)
-    training.train(epochs=1, batch_size=3)
+    training.train(epochs=10, batch_size=1)
 
     # Test network model
     weights_path = './weights/' + train_name + '_weights.pth.tar'
