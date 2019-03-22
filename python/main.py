@@ -74,6 +74,13 @@ if __name__ == '__main__':
     if(len(sys.argv)>5):
         network_name = str(sys.argv[5])
     print('net name:', network_name)
+
+    if network_name == 'Unet2':
+        bilinear = False
+    else:
+        bilinear = True
+    print('bilinear:', bilinear)
+
     print('---------------------------')
     print('')
 
@@ -84,7 +91,7 @@ if __name__ == '__main__':
     logger = Logger('../logs/' + train_name + '/')
 
     # Load Unet
-    model = Unet2(n_channels=1, n_classes=3)
+    model = Unet2(n_channels=1, n_classes=3, bilinear=bilinear)
     #print(net)
 
     # Load CUDA if exist

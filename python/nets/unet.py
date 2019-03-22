@@ -198,7 +198,7 @@ class Unet2(nn.Module):
     '''
     U-net class from end-to-end ovarian structures segmentation
     '''
-    def __init__(self, n_channels, n_classes):
+    def __init__(self, n_channels, n_classes, bilinear=False):
         ''' Constructor '''
         super(Unet2, self).__init__()
 
@@ -222,17 +222,17 @@ class Unet2(nn.Module):
         self.conv_down6 = downconv(40, 48, dropout=0.2)
 
         # Set upconvolution layer 1
-        self.conv_up1 = upconv(48, 320, res_ch=40, dropout=0.2)
+        self.conv_up1 = upconv(48, 320, res_ch=40, dropout=0.2, bilinear=bilinear)
         # Set upconvolution layer 2
-        self.conv_up2 = upconv(320, 256, res_ch=32, dropout=0.2)
+        self.conv_up2 = upconv(320, 256, res_ch=32, dropout=0.2, bilinear=bilinear)
         # Set upconvolution layer 3
-        self.conv_up3 = upconv(256, 192, res_ch=24, dropout=0.2)
+        self.conv_up3 = upconv(256, 192, res_ch=24, dropout=0.2, bilinear=bilinear)
         # Set upconvolution layer 4
-        self.conv_up4 = upconv(192, 128, res_ch=16, dropout=0.2)
+        self.conv_up4 = upconv(192, 128, res_ch=16, dropout=0.2, bilinear=bilinear)
         # Set upconvolution layer 5
-        self.conv_up5 = upconv(128, 64, res_ch=8, dropout=0.2)
+        self.conv_up5 = upconv(128, 64, res_ch=8, dropout=0.2, bilinear=bilinear)
         # Set upconvolution layer 6
-        self.conv_up6 = upconv(64, 8, res_ch=8, dropout=0.2)
+        self.conv_up6 = upconv(64, 8, res_ch=8, dropout=0.2, bilinear=bilinear)
 
         # Set output layer
         if type(n_classes) is list:
