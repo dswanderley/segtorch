@@ -36,7 +36,7 @@ class Training:
             Arguments:
             @state (dict): parameters of the network
         '''
-        path = './weights/'
+        path = '../weights/'
         filename = path + self.train_name + '_weights.pth.tar'
         torch.save(state, filename)
 

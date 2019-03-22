@@ -53,12 +53,12 @@ if __name__ == '__main__':
     loss = 'dsc'
     batch_size = 3
     n_epochs = 1
-    
+
     # Define training name
     train_name = gettrainname(network_name)
 
     # Set logs folder
-    logger = Logger('./logs/' + train_name + '/')
+    logger = Logger('../logs/' + train_name + '/')
 
     # Load Unet
     model = Unet2(n_channels=1, n_classes=3)
@@ -73,9 +73,9 @@ if __name__ == '__main__':
                            tsfrm.RandomAffine(90, translate=(0.15, 0.15), scale=(0.75, 1.5), resample=3, fillcolor=0)
                            ])
     # Dataset definitions
-    dataset_train = OvaryDataset(im_dir='dataset/im/train/', gt_dir='dataset/gt/train/', transform=transform)
-    dataset_val = OvaryDataset(im_dir='dataset/im/val/', gt_dir='dataset/gt/val/')
-    dataset_test = OvaryDataset(im_dir='dataset/im/test/', gt_dir='dataset/gt/test/')
+    dataset_train = OvaryDataset(im_dir='../dataset/im/train/', gt_dir='../dataset/gt/train/', transform=transform)
+    dataset_val = OvaryDataset(im_dir='../dataset/im/val/', gt_dir='../dataset/gt/val/')
+    dataset_test = OvaryDataset(im_dir='../dataset/im/test/', gt_dir='../dataset/gt/test/')
 
     # Training Parameters
     if opt == 'adam':
@@ -96,6 +96,6 @@ if __name__ == '__main__':
     training.train(epochs=n_epochs, batch_size=batch_size)
 
     # Test network model
-    weights_path = './weights/' + train_name + '_weights.pth.tar'
+    weights_path = '../weights/' + train_name + '_weights.pth.tar'
     inference = Inference(model, device, weights_path)
     inference.predict(dataset_test)

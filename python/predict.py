@@ -20,7 +20,7 @@ class Inference():
         Inferecen class
     """
 
-    def __init__(self, model, device, weights_path, folder='predictions/'):
+    def __init__(self, model, device, weights_path, folder='../predictions/'):
         '''
             Inference class - Constructor
         '''
