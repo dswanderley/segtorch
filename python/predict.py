@@ -46,7 +46,7 @@ class Inference():
         '''
         filename = self.pred_folder + "results.csv"
         # Save table
-        with open(filename,'w',newline='') as fp:
+        with open(filename,'w') as fp:
             a = csv.writer(fp, delimiter=';')
             a.writerows(table)   
 
