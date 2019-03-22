@@ -102,8 +102,7 @@ class Inference():
             print('')
 
             bs, cl, h, w = groundtruth.shape
-            img_out = pred[0].detach().cpu().numpy()
-            img_out = np.reshape(img_out, (h, w, cl))
+            img_out = pred[0].detach().cpu().permute(1,2,0).numpy()
             Image.fromarray((255*img_out).astype(np.uint8)).save(self.pred_folder + iname)
 
         self._save_data(dsc_data)
