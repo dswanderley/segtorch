@@ -8,6 +8,7 @@ Created on Wed Mar 03 10:39:30 2019
 """
 
 import os
+import sys
 import time
 import torch
 import torchvision
@@ -48,11 +49,32 @@ def gettrainname(name):
 if __name__ == '__main__':
 
     # Input parameters
-    network_name = 'Unet2'
+    n_epochs = 1
+    batch_size = 3
     opt = 'adam'
     loss = 'dsc'
-    batch_size = 3
-    n_epochs = 1
+    network_name = 'Unet2'
+             
+    if(len(sys.argv)>1):
+        n_epochs = float(sys.argv[1])
+    print('epochs:', n_epochs)
+    
+    if(len(sys.argv)>2):
+        batch_size = (sys.argv[2])
+    print('batch size:', batch_size)
+
+    if(len(sys.argv)>3):
+        opt = (sys.argv[3])
+    print('opt:', opt)
+    
+    if(len(sys.argv)>4):
+        loss = (sys.argv[4])
+    print('loss:', loss)
+
+    if(len(sys.argv)>5):
+        network_name = (sys.argv[5])
+    print('net name:', network_name)
+    print('---------------------------')
 
     # Define training name
     train_name = gettrainname(network_name)
