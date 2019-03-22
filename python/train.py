@@ -206,6 +206,7 @@ class Training:
             # ========================= Validation ============================= #
             avg_loss_val, ref_image_val, ref_pred_val = self._iterate_val(data_loader_val)
             print('validation loss: {:f}'.format(avg_loss_val))
+            print('')
 
             # ======================== Save weights ============================ #
             if best_loss > avg_loss_val:

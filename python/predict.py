@@ -99,6 +99,7 @@ class Inference():
             print(iname)
             print('Stroma DSC:    {:f}'.format(dsc[1]))
             print('Follicle DSC:  {:f}'.format(dsc[2]))
+            print('')
 
             bs, cl, h, w = groundtruth.shape
             img_out = pred[0].detach().cpu().numpy()

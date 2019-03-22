@@ -56,25 +56,26 @@ if __name__ == '__main__':
     network_name = 'Unet2'
              
     if(len(sys.argv)>1):
-        n_epochs = float(sys.argv[1])
+        n_epochs = int(sys.argv[1])
     print('epochs:', n_epochs)
     
     if(len(sys.argv)>2):
-        batch_size = (sys.argv[2])
+        batch_size = int(sys.argv[2])
     print('batch size:', batch_size)
 
     if(len(sys.argv)>3):
-        opt = (sys.argv[3])
+        opt = str(sys.argv[3])
     print('opt:', opt)
     
     if(len(sys.argv)>4):
-        loss = (sys.argv[4])
+        loss = str(sys.argv[4])
     print('loss:', loss)
 
     if(len(sys.argv)>5):
-        network_name = (sys.argv[5])
+        network_name = str(sys.argv[5])
     print('net name:', network_name)
     print('---------------------------')
+    print('')
 
     # Define training name
     train_name = gettrainname(network_name)
@@ -116,8 +117,12 @@ if __name__ == '__main__':
     training = Training(model, device, dataset_train, dataset_val,
                         optmizer, loss_function, logger=logger, train_name=train_name)
     training.train(epochs=n_epochs, batch_size=batch_size)
+    print('------------- END OF TRAINING -------------')
+    print(' ')
 
     # Test network model
+    print('Testing')
+    print('')
     weights_path = '../weights/' + train_name + '_weights.pth.tar'
     inference = Inference(model, device, weights_path)
     inference.predict(dataset_test)
