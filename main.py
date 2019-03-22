@@ -61,7 +61,7 @@ if __name__ == '__main__':
     logger = Logger('./logs/' + train_name + '/')
 
     # Load Unet
-    model = Unet2(n_channels=1, n_classes=[3,2])
+    model = Unet2(n_channels=1, n_classes=3)
     #print(net)
 
     # Load CUDA if exist

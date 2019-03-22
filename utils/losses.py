@@ -7,8 +7,15 @@ Created on Wed Fev 27 18:37:58 2019
 @description: Alternative Loss Functions (Dice)
 """
 
+import math
 import torch
+
+import numpy as np
 import torch.nn as nn
+import matplotlib.pyplot as plt
+
+#from PIL import Image
+from torch.autograd import Variable
 
 
 class DiceLoss(nn.Module):
@@ -76,70 +83,99 @@ class DiscriminativeLoss(nn.Module):
     """
     def __init__(self, n_features, delta_v=0.5, delta_d=1.5, alpha = 1., beta = 1., gamma = 0.001):
         super(DiscriminativeLoss, self).__init__()
-        
+
         self.n_features = n_features
-        self.delta_v = delta_v 
+        self.delta_v = delta_v
         self.delta_d = delta_d
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
+
+    def _plot(self, mean, data):
+        '''
+            Plot a scatter chart (print as png)
+        '''
+        COLOR = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+        
+        nf, pos, c = data.shape
+
+        mean_np = mean
+        mean_np = mean_np.detach().numpy()
+        
+        data_np = data
+        data_np = data_np.detach().numpy()
+        
+        area_ext = (math.pi * self.delta_d)**2
+        area_int = (math.pi * self.delta_v)**2
+
+        for i in range(1,c):
+            plt.scatter(data_np[0,:,i], data_np[1,:,i], c=COLOR[i], marker='.')
+            plt.scatter(mean_np[0,i], mean_np[1,i], c=COLOR[i], marker='X')
+            
+            plt.scatter(mean_np[0,i], mean_np[1,i], c='#555555', s=area_ext, alpha=0.1)
+            plt.scatter(mean_np[0,i], mean_np[1,i], c='#000000', s=area_int, alpha=0.1)
+
+        plt.savefig('cluster/cluster_map.png')
+        plt.close()
+
+    def _sort_instances(self, pred, gt):
+
+        # Get unic labesl from 0 to max (n_instances-1)
+        unique_labels = torch.unique(gt, sorted=True) # instances labels (including background = 0)
+        # Get data dimensions
+        n_instances = len(unique_labels)
+        n_filters, n_loc = pred.size()
+        # Reshape and expand (repeat) to the number of instances
+        pred_repeated = pred.unsqueeze(2).expand(n_filters, n_loc, n_instances).contiguous()  # n_filters, n_loc, n_instances
+
+        # Mask with instances, each depth is a instance
+        imasks = torch.zeros(n_loc, n_instances)
+        for i in range(n_instances):
+            imasks[...,i] = torch.where(gt == unique_labels[i], torch.ones(gt.shape), torch.zeros(gt.shape))
+        # Reshape and expand (repeat) to the number of features
+        imasks.unsqueeze_(0) # 1, n_loc, n_instances
+        
+        return pred_repeated, imasks, n_instances
     
 
-    def _sort_instances(self, correct_label, reshaped_pred):
-        
-        # Count instances
-        unique_labels = torch.unique(correct_label, sorted=True) # instances labels (including background = 0)
-        num_instances  = len(unique_labels) # number of instances (including background)
-        counts = torch.histc(correct_label.float(), bins=num_instances, min=0, max=num_instances-1)
-        counts = counts.expand(self.n_features, num_instances)   # expected amount of pixel for each instance
-        unique_id = correct_label.expand(self.n_features, self.height * self.width).long() # expected index of each pixel
-        
-         # Get sum by instance
-        segmented_sum = torch.zeros(self.n_features, num_instances).scatter_add(1, unique_id, reshaped_pred)
-        # Mean of each instance in each feature layer
-        mu = torch.div(segmented_sum, counts)
-
-        return num_instances, counts, unique_id, mu
-
-    
-    def _variance_term(self, mu, num_instances, unique_id, counts, reshaped_pred):
+    def _variance_term(self, mu, x, gt):
         ''' l_var  - intra-cluster distance '''
 
+        # Count pixels of each instance
+        counts = torch.sum(gt, dim=1)
+        _, C = counts.shape # number of clusterss
+        
         # Mean of the instance at each expected position for that instance
-        mu_expand = torch.gather(mu, 1, unique_id)
-
+        mu_expand = mu.unsqueeze_(1).expand(x.shape) * gt
+        
         # Calculate intra distance
-        distance = mu_expand - reshaped_pred
-        distance = torch.norm(distance, dim=0) - self.delta_v    # apply delta_v
-        distance = torch.clamp(distance, 0., distance.max())**2 # max(0,x)
-        distance.reshape(1,len(distance))
+        diff = torch.norm(mu_expand - x, dim=0)
+        distance = torch.clamp(diff - self.delta_v, 0., 100000.)**2
 
-        l_var = torch.zeros(1, num_instances).scatter_add(1, unique_id[0].reshape(1, self.height * self.width), distance.reshape(1, self.height * self.width))
-        l_var = l_var / counts
-        l_var = l_var.sum() / num_instances
-        print(l_var)
+        # variance
+        l_var = torch.sum(torch.div(torch.sum(distance), counts)) / C
 
         return l_var
-        
-    
-    def _distance_term(self, mu, num_instances):
+
+
+    def _distance_term(self, mu):
         ''' l_dist - inter-cluster distance'''
 
-        # Calculate inter distance
-        mu_sdim = mu.reshape(mu.shape[1] * mu.shape[0]) # reshape to apply meshgrid
-        mu_x, mu_y = torch.meshgrid(mu_sdim, mu_sdim)
-        aux_x = mu_x[:,:num_instances].reshape(self.n_features, num_instances, num_instances)#.permute(1,2,0)
-        aux_y = mu_y[:num_instances, :].reshape(num_instances, self.n_features, num_instances).permute(1,0,2)
-        # Calculate differece interclasses
-        mu_diff = aux_x - aux_y
-        mu_diff = torch.norm(mu_diff,dim=0)
-        # Use a matrix with delt_d to calculate each difference
-        aux_delta_d = 2 * self.delta_d * (torch.ones(mu_diff.shape) - torch.eye(mu_diff.shape[0])) # ignore diagonal (C_a = C_b)
-        l_dist = aux_delta_d - mu_diff
-        l_dist = torch.clamp(l_dist, 0., l_dist.max())**2 # max(0,x)
-        # sum / C(C-1)
-        l_dist = l_dist.sum() / num_instances / (num_instances - 1)
-        print(l_dist)
+        # number features and number of clusterss
+        nf, _, C = mu.shape
+
+        # Prepare data - meshgrid
+        means = mu.reshape(nf,C).permute(1, 0)
+        means_1 = means.unsqueeze(1).expand(C, C, nf)
+        means_2 = means_1.permute(1, 0, 2)
+        
+        # Calculate norm of distance
+        diff = means_1 - means_2 
+        norm = torch.norm(diff, dim=2)
+        margin = Variable(2 * self.delta_d * (1.0 - torch.eye(C))) # cluster radius
+
+        # calculate distance term
+        l_dist = torch.sum(torch.clamp(margin - norm, 0., 100000.)**2) / (C*(C-1))
 
         return l_dist
 
@@ -147,64 +183,64 @@ class DiscriminativeLoss(nn.Module):
     def _regularization_term(self, mu, num_instances):
         ''' l_reg - regularization term '''
 
-        l_reg = torch.norm(mu, dim=0)   # norm
-        l_reg = l_reg.sum() / num_instances # sum and divide
-        print(l_reg)
-        
+        l_reg = (torch.norm(mu, dim=0) / num_instances).sum()
+
         return l_reg
 
 
-    def _discriminative_loss(self, pred, tgt):
+    def _discriminative_loss(self, pred, tgt, plot):
+        '''
+            Calculate discriminative loss function (l_var, l_dist, l_reg).
+        '''
 
         # Adjust data - CHECK IF NECESSARY
         correct_label = tgt.unsqueeze_(0).view(1, self.height * self.width)
         correct_label.long()
 
         # Prediction
-        pred = torch.rand(1, self.height*self.width, self.n_features)
-        reshaped_pred = pred.reshape(self.n_features, self.height*self.width)
+        reshaped_pred = pred.reshape(self.n_features, self.height*self.width).contiguous()
 
         # Count instances
-        num_instances, counts, unique_id, mu = self._sort_instances(correct_label, reshaped_pred)
-        
+        pred_repeated, unique_id, num_instances = self._sort_instances(reshaped_pred, correct_label)
+
+        # Calculate correspondence map of prediction
+        pred_masked = pred_repeated * unique_id
+        # Calculate means
+        means = torch.div(pred_masked.sum(1), unique_id.sum(1))
+
+        if plot:
+            self._plot(means, pred_masked)
+
         # Variance term
-        l_var = self._variance_term(mu, num_instances, unique_id, counts[0], reshaped_pred)
+        l_var = self._variance_term(means, pred_masked, unique_id)
         # Distance term
-        l_dist = self._distance_term(mu, num_instances)
+        l_dist = self._distance_term(means)
         # Regularization term
-        l_reg = self._regularization_term(mu, num_instances)
+        l_reg = self._regularization_term(means, num_instances)
 
         # Loss
         loss = self.alpha * l_var + self.beta *  l_dist + self.gamma * l_reg
-        print(loss)
+        #print(loss)
 
         return loss, l_var, l_dist, l_reg
 
 
-    def forward(self, prediction, target):
+    def forward(self, prediction, target, plot=False):
 
         # Adjust data - CHECK IF NECESSARY
-        self.batch_size, self.height, self.width = target.shape
-        
-        out_lvar = torch.zeros(self.batch_size)
-        out_ldist = torch.zeros(self.batch_size)
-        out_lreg = torch.zeros(self.batch_size)
-        out_loss = torch.zeros(self.batch_size)
+        batch_size, self.height, self.width = target.shape
 
-        for i in range(self.batch_size):
+        loss_list = []
 
-            pred = prediction[i,...]
-            tgt = target[i,...]
+        for i in range(batch_size):
 
-            loss, l_var, l_dist, l_reg = self._discriminative_loss(pred, tgt)
-
-            out_lvar[i] = l_reg
-            out_ldist[i] = l_var
-            out_lreg[i] = l_dist
-            out_loss[i] = loss
+            pred = prediction[i,...].contiguous()
+            tgt = target[i,...].contiguous()
             
-        return  out_loss.sum() / self.batch_size, \
-                out_lvar.sum() / self.batch_size, \
-                out_ldist.sum() / self.batch_size, \
-                out_lreg.sum() / self.batch_size
-                
+            loss, l_var, l_dist, l_reg = self._discriminative_loss(pred, tgt, plot)
+            
+            loss_list.append(loss / batch_size)
+            
+        out_loss = torch.sum(torch.stack(loss_list))
+
+        return  out_loss

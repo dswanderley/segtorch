@@ -13,9 +13,9 @@ import torch
 
 import numpy as np
 
-from torchvision import transforms
 from PIL import Image
 from skimage import exposure, filters
+from torchvision import transforms
 from torch.utils.data import Dataset
 
 from scipy import ndimage as ndi
