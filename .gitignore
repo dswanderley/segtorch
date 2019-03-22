@@ -3,3 +3,4 @@
 *.png
 *.tar
 logs/
+*.csv
