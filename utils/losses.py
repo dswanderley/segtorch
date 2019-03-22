@@ -7,14 +7,16 @@ Created on Wed Fev 27 18:37:58 2019
 @description: Alternative Loss Functions (Dice)
 """
 
+import math
 import torch
+
+import numpy as np
 import torch.nn as nn
+import matplotlib.pyplot as plt
+
+#from PIL import Image
 from torch.autograd import Variable
 
-from PIL import Image
-import numpy as np
-import matplotlib.pyplot as plt
-import math
 
 class DiceLoss(nn.Module):
     '''
@@ -113,7 +115,7 @@ class DiscriminativeLoss(nn.Module):
             plt.scatter(mean_np[0,i], mean_np[1,i], c='#555555', s=area_ext, alpha=0.1)
             plt.scatter(mean_np[0,i], mean_np[1,i], c='#000000', s=area_int, alpha=0.1)
 
-        plt.savefig('foo.png')
+        plt.savefig('cluster/cluster_map.png')
         plt.close()
 
     def _sort_instances(self, pred, gt):
@@ -238,7 +240,7 @@ class DiscriminativeLoss(nn.Module):
             loss, l_var, l_dist, l_reg = self._discriminative_loss(pred, tgt, plot)
             
             loss_list.append(loss / batch_size)
-
+            
         out_loss = torch.sum(torch.stack(loss_list))
 
         return  out_loss
