@@ -101,7 +101,7 @@ class Inference():
             print('Follicle DSC:  {:f}'.format(dsc[2]))
 
             bs, cl, h, w = groundtruth.shape
-            img_out = pred[0].detach().numpy()
+            img_out = pred[0].detach().cpu().numpy()
             img_out = np.reshape(img_out, (h, w, cl))
             Image.fromarray((255*img_out).astype(np.uint8)).save(self.pred_folder + iname)
 
