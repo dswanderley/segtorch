@@ -13,7 +13,6 @@ import time
 import torch
 import torchvision
 
-import numpy as np
 import torch.nn as nn
 import utils.transformations as tsfrm
 
