@@ -95,7 +95,7 @@ if __name__ == '__main__':
     #print(net)
 
     # Load CUDA if exist
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.cuda.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Transformation parameters
     transform = tsfrm.Compose([tsfrm.RandomHorizontalFlip(p=0.5),
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     if loss == 'dsc' or loss == 'dice':
         loss_function = DiceLoss() 
     elif loss == 'discriminative' or loss == 'dlf':
-        loss_function = DiscriminativeLoss() 
+        loss_function = DiscriminativeLoss(n_features=2) 
     else:
         loss_function = nn.CrossEntropyLoss()
 

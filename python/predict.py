@@ -7,11 +7,15 @@ Created on Wed Mar 03 17:40:00 2019
 @description: Script for network prediction
 """
 
+import sys
 import csv
 import torch
 import numpy as np
 from PIL import Image
+from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from nets.unet import Unet2
+from utils.datasets import OvaryDataset
 from utils.losses import DiceCoefficients
 
 
@@ -36,7 +40,11 @@ class Inference():
         '''
             Load weights and network state.
         '''
-        state = torch.load(self.weights_path)
+
+        if self.device.idx == 'cpu':
+            state = torch.load(self.weights_path, map_location='cpu')
+        else:
+            state = torch.load(self.weights_path)
         self.model.load_state_dict(state['state_dict'])
 
 
@@ -65,7 +73,7 @@ class Inference():
         dsc_data.append(['name', 'backgound', 'stroma', 'follicles'])
 
         data_loader = DataLoader(images, batch_size=1, shuffle=False)
-        for idx, sample in enumerate(data_loader):
+        for _, sample in enumerate(data_loader):
             # Load data
             image = sample['image']
             gt_mask = sample['gt_mask']
@@ -80,7 +88,7 @@ class Inference():
 
             # Handle with ground truth
             if len(gt_mask.size()) < 4:
-                target = gt_mask.long()
+                groundtruth = gt_mask.long()
             else:
                 groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
 
@@ -91,7 +99,10 @@ class Inference():
             if type(pred) is list:
                 pred = pred[0]
 
-            dsc = self.criterion(pred, groundtruth)
+            t = Variable(torch.Tensor([0.5]))
+            pred_final = torch.where(pred < t, torch.zeros(pred.shape), torch.ones(pred.shape))
+
+            dsc = self.criterion(pred_final, groundtruth)
 
             iname = im_name[0]
             dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item()])
@@ -101,8 +112,34 @@ class Inference():
             print('Follicle DSC:  {:f}'.format(dsc[2]))
             print('')
 
-            bs, cl, h, w = groundtruth.shape
-            img_out = pred[0].detach().cpu().permute(1,2,0).numpy()
+            img_out = pred_final[0].detach().cpu().permute(1,2,0).numpy()
             Image.fromarray((255*img_out).astype(np.uint8)).save(self.pred_folder + iname)
 
         self._save_data(dsc_data)
+
+
+# Main calls
+if __name__ == '__main__':
+
+    # Model name
+    train_name = '20190322_1721_Unet2'
+
+    if(len(sys.argv)>1):
+        train_name = int(sys.argv[1])
+    print('train name:', train_name)
+
+    # Load Unet
+    model = Unet2(n_channels=1, n_classes=3)
+
+    # Load CUDA if exist
+    device = torch.cuda.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    # Dataset definitions
+    dataset_test = OvaryDataset(im_dir='../dataset/im/test/', gt_dir='../dataset/gt/test/')
+
+    # Test network model
+    print('Testing')
+    print('')
+    weights_path = '../weights/' + train_name + '_weights.pth.tar'
+    inference = Inference(model, device, weights_path)
+    inference.predict(dataset_test)
