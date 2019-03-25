@@ -10,6 +10,7 @@ Created on Wed Fev 27 18:37:04 2019
 
 import os
 import torch
+import random
 
 import numpy as np
 
@@ -19,6 +20,57 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 
 from scipy import ndimage as ndi
+
+
+def draw_follicles_points(fmap, rate=.7, margin=.5):
+    '''
+    Get one point for each follicle
+    '''
+    n_elements = fmap.max()
+    margin_dist = int(margin * 100)
+    
+    points = []
+    for j in range(1, n_elements+1):
+        # Draw a value acording the initial probability rate
+        goahead = np.random.choice(np.arange(2), p=[1-rate, rate])
+        # Process oif follicle was selected
+        if goahead > 0:
+            aux_map = np.zeros(fmap.shape)
+            aux_map[fmap==j] = 1
+            # Compute Bouding Box
+            slice_x, slice_y = ndi.find_objects(aux_map==1)[0]
+            # Compute Center of max
+            center = ndi.measurements.center_of_mass(aux_map)
+            # Get bouding box height and width
+            delta_x = slice_x.stop - slice_x.start
+            delta_y = slice_y.stop - slice_y.start
+            # Calculate 
+            margin = random.randint(-margin_dist, margin_dist) / 100.
+            new_x = round(center[0] + margin * delta_x / 2)
+            new_y = round(center[1] + margin * delta_y / 2)
+
+            points.append((new_x, new_y))
+    
+    return points
+
+def iteractive_follicle_map(points, height, width):
+    '''
+        Compute the Euclidean distance transformation of the provided points.
+    '''
+    # Reference data for meshgrid
+    x = np.array(range(0, height))
+    y = np.array(range(0, width))
+    # One map for each point
+    dist_maps = np.zeros((len(x), len(y), len(points)))
+    # Compute maps
+    for i in range(len(points)):
+        p = points[i]
+        xv, yv = np.meshgrid(np.power(p[1]-x, 2), np.power(p[0]-y, 2))
+        dist_maps[...,i] =  np.clip(np.sqrt(xv + yv), 0, 255)
+    # Get minimum value in the third axis
+    psf_map = dist_maps.min(axis=2)
+
+    return psf_map / 255.
 
 
 class OvaryDataset(Dataset):
@@ -183,7 +235,15 @@ class OvaryDataset(Dataset):
         '''
         # Get mask labeling each follicle from 1 to N value.
         inst_mask, num_inst = ndi.label(mask_follicle)
+        
 
+        '''
+            Interactive Object Selection
+        '''
+        selected_points = draw_follicles_points(inst_mask, rate=.7, margin=.5)
+        imap_fol = iteractive_follicle_map(selected_points, 512, 512)
+        
+        
         '''
             Input data: Add CLAHE if necessary
         '''
@@ -211,3 +271,4 @@ class OvaryDataset(Dataset):
                     'num_follicles':  num_inst }
 
         return sample
+
