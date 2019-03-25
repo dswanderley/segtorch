@@ -41,7 +41,7 @@ class Inference():
             Load weights and network state.
         '''
 
-        if self.device.idx == 'cpu':
+        if self.device.type == 'cpu':
             state = torch.load(self.weights_path, map_location='cpu')
         else:
             state = torch.load(self.weights_path)
@@ -99,8 +99,10 @@ class Inference():
             if type(pred) is list:
                 pred = pred[0]
 
-            t = Variable(torch.Tensor([0.5]))
-            pred_final = torch.where(pred < t, torch.zeros(pred.shape), torch.ones(pred.shape))
+            t = Variable(torch.Tensor([0.5])).to(self.device)
+            pred_final = torch.where(pred < t, \
+                    torch.zeros(pred.shape).to(self.device), \
+                    torch.ones(pred.shape).to(self.device))
 
             dsc = self.criterion(pred_final, groundtruth)
 
@@ -125,14 +127,14 @@ if __name__ == '__main__':
     train_name = '20190322_1721_Unet2'
 
     if(len(sys.argv)>1):
-        train_name = int(sys.argv[1])
+        train_name = sys.argv[1]
     print('train name:', train_name)
 
     # Load Unet
     model = Unet2(n_channels=1, n_classes=3)
 
     # Load CUDA if exist
-    device = torch.cuda.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Dataset definitions
     dataset_test = OvaryDataset(im_dir='../dataset/im/test/', gt_dir='../dataset/gt/test/')
