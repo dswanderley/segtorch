@@ -254,8 +254,7 @@ class OvaryDataset(Dataset):
             selected_points = select_clicks(inst_mask)
             imap_fol = iteractive_map(selected_points, im_np.shape[0], im_np.shape[1])
             imap_fol = imap_fol.reshape(imap_fol.shape+(1,))
-            Image.fromarray((255*imap_fol[...,0]).astype(np.uint8)).save("imap_fol.png")
-            im_np = np.concatenate((im_np, imap_fol), axis=2)
+            im_np = np.concatenate((im_np, imap_fol), axis=2).astype(np.float32)
         
         
         '''
@@ -268,9 +267,7 @@ class OvaryDataset(Dataset):
             imclahe = np.zeros((im_np.shape[0], im_np.shape[1], 1))
             imclahe[...,0] = exposure.equalize_adapthist(im_np[...,0], kernel_size=im_np.shape[0]/8,
                             clip_limit=0.02, nbins=256)
-
-            Image.fromarray((255*imclahe[...,0]).astype(np.uint8)).save("imclahe.png")
-            im_np = np.concatenate((imclahe, im_np), axis=2)
+            im_np = np.concatenate((imclahe, im_np), axis=2).astype(np.float32)
 
         # Print data if necessary
         #Image.fromarray((255*im_np).astype(np.uint8)).save("im_np.png")
