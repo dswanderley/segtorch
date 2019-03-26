@@ -251,7 +251,10 @@ class OvaryDataset(Dataset):
             if len(im_np.shape) == 2:
                 im_np = im_np.reshape(im_np.shape+(1,))
 
-            selected_points = select_clicks(inst_mask)
+            if type(self.imap) == list:
+                selected_points = select_clicks(inst_mask, rate=self.imap[0], margin=self.imap[1])
+            else:
+                selected_points = select_clicks(inst_mask)
             imap_fol = iteractive_map(selected_points, im_np.shape[0], im_np.shape[1])
             imap_fol = imap_fol.reshape(imap_fol.shape+(1,))
             im_np = np.concatenate((im_np, imap_fol), axis=2).astype(np.float32)
@@ -285,4 +288,3 @@ class OvaryDataset(Dataset):
                     'num_follicles':  num_inst }
 
         return sample
-

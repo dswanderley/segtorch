@@ -52,7 +52,7 @@ if __name__ == '__main__':
     batch_size = 3
     opt = 'adam'
     loss = 'dsc'
-    network_name = 'Unet2'
+    network_name = 'iUnet2'
     bilinear = False
     clahe = False
     interaction = False
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     print('clahe:', clahe)
 
     if 'i' in network_name:
-        interaction = True
+        interaction = [1., 0.5]
         in_channels += 1
     print('interaction:', interaction)
 
