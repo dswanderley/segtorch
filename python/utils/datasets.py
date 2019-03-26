@@ -22,11 +22,13 @@ from torch.utils.data import Dataset
 from scipy import ndimage as ndi
 
 
-def draw_follicles_points(fmap, rate=.7, margin=.5):
+def select_clicks(fmap, rate=.7, margin=.5):
     '''
     Get one point for each follicle
     '''
+    # Total of elements
     n_elements = fmap.max()
+    # Convert to %
     margin_dist = int(margin * 100)
     
     points = []
@@ -53,7 +55,8 @@ def draw_follicles_points(fmap, rate=.7, margin=.5):
     
     return points
 
-def iteractive_follicle_map(points, height, width):
+
+def iteractive_map(points, height, width):
     '''
         Compute the Euclidean distance transformation of the provided points.
     '''
@@ -61,7 +64,10 @@ def iteractive_follicle_map(points, height, width):
     x = np.array(range(0, height))
     y = np.array(range(0, width))
     # One map for each point
-    dist_maps = np.zeros((len(x), len(y), len(points)))
+    if len(points) > 0:
+        dist_maps = np.ones((len(x), len(y), len(points)))
+    else:
+        dist_maps = np.ones((len(x), len(y), 1))
     # Compute maps
     for i in range(len(points)):
         p = points[i]
@@ -69,7 +75,7 @@ def iteractive_follicle_map(points, height, width):
         dist_maps[...,i] =  np.clip(np.sqrt(xv + yv), 0, 255)
     # Get minimum value in the third axis
     psf_map = dist_maps.min(axis=2)
-
+    
     return psf_map / 255.
 
 
@@ -79,7 +85,7 @@ class OvaryDataset(Dataset):
     """
 
     def __init__(self, im_dir='im', gt_dir='gt',
-    one_hot=True, clahe=False, transform=None):
+    one_hot=True, clahe=False, imap=False, transform=None):
         """
         Args:
             im_dir (string): Directory with all the images.
@@ -94,6 +100,7 @@ class OvaryDataset(Dataset):
         self.transform = transform
         self.one_hot = one_hot
         self.clahe = clahe
+        self.imap = imap
 
         ldir_im = set(x for x in os.listdir(self.im_dir))
         ldir_gt = set(x for x in os.listdir(self.gt_dir))
@@ -235,13 +242,20 @@ class OvaryDataset(Dataset):
         '''
         # Get mask labeling each follicle from 1 to N value.
         inst_mask, num_inst = ndi.label(mask_follicle)
-        
-
+            
         '''
             Interactive Object Selection
         '''
-        selected_points = draw_follicles_points(inst_mask, rate=.7, margin=.5)
-        imap_fol = iteractive_follicle_map(selected_points, 512, 512)
+        # Check has interactive map
+        if self.imap:
+            if len(im_np.shape) == 2:
+                im_np = im_np.reshape(im_np.shape+(1,))
+
+            selected_points = select_clicks(inst_mask)
+            imap_fol = iteractive_map(selected_points, im_np.shape[0], im_np.shape[1])
+            imap_fol = imap_fol.reshape(imap_fol.shape+(1,))
+            Image.fromarray((255*imap_fol[...,0]).astype(np.uint8)).save("imap_fol.png")
+            im_np = np.concatenate((im_np, imap_fol), axis=2)
         
         
         '''
@@ -249,11 +263,14 @@ class OvaryDataset(Dataset):
         '''
         # Check has clahe
         if self.clahe:
-            imclahe = np.zeros((im_np.shape[0], im_np.shape[1], 2))
-            imclahe[...,0] = im_np
-            imclahe[...,1] = exposure.equalize_adapthist(im_np, kernel_size=im_np.shape[0]/8,
+            if len(im_np.shape) == 2:
+                im_np = im_np.reshape(im_np.shape+(1,))
+            imclahe = np.zeros((im_np.shape[0], im_np.shape[1], 1))
+            imclahe[...,0] = exposure.equalize_adapthist(im_np[...,0], kernel_size=im_np.shape[0]/8,
                             clip_limit=0.02, nbins=256)
-            im_np = imclahe
+
+            Image.fromarray((255*imclahe[...,0]).astype(np.uint8)).save("imclahe.png")
+            im_np = np.concatenate((imclahe, im_np), axis=2)
 
         # Print data if necessary
         #Image.fromarray((255*im_np).astype(np.uint8)).save("im_np.png")
