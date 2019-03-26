@@ -51,7 +51,6 @@ class Training:
         self.model.train()
 
         # Batch iteration - Training dataset
-        #for batch_idx, (im_name, image, gt_mask, ov_mask, fol_mask) in enumerate(data_loader_train):
         for batch_idx, sample in enumerate(data_loader_train):
             
             # Load data
@@ -75,7 +74,7 @@ class Training:
             if torch.cuda.is_available():
                 self.model = self.model.to(self.device)
                 image = image.to(self.device)
-                gt_mask = gt_mask.to(self.device)
+                groundtruth = groundtruth.to(self.device)
                 #ov_mask = ov_mask.to(self.device)
                 #fol_mask = fol_mask.to(self.device)
 
@@ -138,7 +137,7 @@ class Training:
             if torch.cuda.is_available():
                 self.model = self.model.to(self.device)
                 image = image.to(self.device)
-                gt_mask = gt_mask.to(self.device)
+                groundtruth = groundtruth.to(self.device)
                 #ov_mask = ov_mask.to(self.device)
                 #fol_mask = fol_mask.to(self.device)
 

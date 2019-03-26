@@ -95,7 +95,7 @@ class Inference():
             if torch.cuda.is_available():
                 self.model = self.model.to(self.device)
                 image = image.to(self.device)
-                gt_mask = gt_mask.to(self.device)
+                groundtruth = groundtruth.to(self.device)
                 #ov_mask = ov_mask.to(self.device)
                 #fol_mask = fol_mask.to(self.device)
 
