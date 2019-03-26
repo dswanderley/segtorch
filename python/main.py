@@ -52,7 +52,7 @@ if __name__ == '__main__':
     batch_size = 3
     opt = 'adam'
     loss = 'dsc'
-    network_name = 'iUnet2'
+    network_name = 'Unet2'
     bilinear = False
     clahe = False
     interaction = False
@@ -113,7 +113,7 @@ if __name__ == '__main__':
                            tsfrm.RandomAffine(90, translate=(0.15, 0.15), scale=(0.75, 1.5), resample=3, fillcolor=0)
                            ])
     # Dataset definitions
-    dataset_train = OvaryDataset(im_dir='../dataset/im/train/', gt_dir='../dataset/gt/train/', transform=transform, imap=interaction, clahe=clahe)
+    dataset_train = OvaryDataset(im_dir='../dataset/im/train_/', gt_dir='../dataset/gt/train/', transform=transform, imap=interaction, clahe=clahe)
     dataset_val = OvaryDataset(im_dir='../dataset/im/val/', gt_dir='../dataset/gt/val/', imap=interaction, clahe=clahe)
     dataset_test = OvaryDataset(im_dir='../dataset/im/test/', gt_dir='../dataset/gt/test/', imap=interaction, clahe=clahe)
 

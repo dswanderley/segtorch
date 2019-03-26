@@ -222,7 +222,13 @@ class OvaryDataset(Dataset):
         '''
             Follicles edge Ground Truth preparation
         '''
-        mask_edges = mask_follicle
+        # 2*Dilate - 2*Erode
+        f_erode = ndi.morphology.binary_erosion(mask_follicle)
+        f_erode = ndi.morphology.binary_erosion(f_erode).astype(np.float32)
+        f_dilate = ndi.morphology.binary_dilation(mask_follicle)
+        f_dilate = ndi.morphology.binary_dilation(f_dilate).astype(np.float32)
+        mask_edges = f_dilate - f_erode
+
         # Ovarian auxiliary mask output
         if encods[2]:
             # Multi mask - background (R = 1) / follicle (G = 1)
@@ -230,12 +236,12 @@ class OvaryDataset(Dataset):
             mask_fback[gt_np < t2] = 255.
             # final mask
             fol_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 2))
-            fol_mask[...,0] = mask_fback
+            fol_mask[...,0] = 1. - mask_edges
             fol_mask[...,1] = mask_edges
-            fol_mask = (fol_mask / 255.).astype(np.float32)
+            fol_mask = (fol_mask).astype(np.float32)
         else:
             # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
-            fol_mask = (mask_edges / 255.).astype(np.float32)
+            fol_mask = (mask_edges).astype(np.float32)
 
         '''
             Instance Follicles mask
@@ -258,7 +264,6 @@ class OvaryDataset(Dataset):
             imap_fol = iteractive_map(selected_points, im_np.shape[0], im_np.shape[1])
             imap_fol = imap_fol.reshape(imap_fol.shape+(1,))
             im_np = np.concatenate((im_np, imap_fol), axis=2).astype(np.float32)
-        
         
         '''
             Input data: Add CLAHE if necessary
