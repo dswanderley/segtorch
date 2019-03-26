@@ -78,6 +78,19 @@ class Inference():
             image = sample['image']
             gt_mask = sample['gt_mask']
             im_name = sample['im_name']
+
+            # Handle input
+            if len(image.size()) < 4:
+                image.unsqueeze_(1) # add a dimension to the tensor
+            else:
+                image = image.permute(0, 3, 1, 2).contiguous()
+
+            # Handle with ground truth
+            if len(gt_mask.size()) < 4:
+                groundtruth = gt_mask.long()
+            else:
+                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
+
             # Active GPU
             if torch.cuda.is_available():
                 self.model = self.model.to(self.device)
@@ -86,14 +99,7 @@ class Inference():
                 #ov_mask = ov_mask.to(self.device)
                 #fol_mask = fol_mask.to(self.device)
 
-            # Handle with ground truth
-            if len(gt_mask.size()) < 4:
-                groundtruth = gt_mask.long()
-            else:
-                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
-
             # Prediction
-            image.unsqueeze_(1) # add a dimension to the tensor
             pred = self.model(image)
             # Handle multiples outputs
             if type(pred) is list:

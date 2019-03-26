@@ -53,10 +53,24 @@ class Training:
         # Batch iteration - Training dataset
         #for batch_idx, (im_name, image, gt_mask, ov_mask, fol_mask) in enumerate(data_loader_train):
         for batch_idx, sample in enumerate(data_loader_train):
+            
             # Load data
             image = sample['image']
             gt_mask = sample['gt_mask']
             #gt_mask = sample['follicle_instances']
+            
+            # Handle input
+            if len(image.size()) < 4:
+                image.unsqueeze_(1) # add a dimension to the tensor
+            else:
+                image = image.permute(0, 3, 1, 2).contiguous()
+
+            # Handle with ground truth
+            if len(gt_mask.size()) < 4:
+                groundtruth = gt_mask.long()
+            else:
+                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
+
             # Active GPU train
             if torch.cuda.is_available():
                 self.model = self.model.to(self.device)
@@ -65,14 +79,7 @@ class Training:
                 #ov_mask = ov_mask.to(self.device)
                 #fol_mask = fol_mask.to(self.device)
 
-            # Handle with ground truth
-            if len(gt_mask.size()) < 4:
-                groundtruth = gt_mask.long()
-            else:
-                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
-
-            # Run prediction
-            image.unsqueeze_(1) # add a dimension to the tensor
+            # Run prediction            
             pred_masks = self.model(image)
             # Handle multiples outputs
             if type(pred_masks) is list:
@@ -114,6 +121,19 @@ class Training:
             image = sample['image']
             gt_mask = sample['gt_mask']
             #gt_mask = sample['follicle_instances']
+
+            # Handle input
+            if len(image.size()) < 4:
+                image.unsqueeze_(1) # add a dimension to the tensor
+            else:
+                image = image.permute(0, 3, 1, 2).contiguous()
+
+            # Handle with ground truth
+            if len(gt_mask.size()) < 4:
+                groundtruth = gt_mask.long()
+            else:
+                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
+
             # Active GPU
             if torch.cuda.is_available():
                 self.model = self.model.to(self.device)
@@ -122,15 +142,8 @@ class Training:
                 #ov_mask = ov_mask.to(self.device)
                 #fol_mask = fol_mask.to(self.device)
 
-            # Handle with ground truth
-            if len(gt_mask.size()) < 4:
-                groundtruth = gt_mask.long()
-            else:
-                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
-
             # Prediction
             self.optimizer.zero_grad()
-            image.unsqueeze_(1) # add a dimension to the tensor, respecting the network input on the first postion (tensor[0])
             val_masks = self.model(image)
             # Handle multiples outputs
             if type(val_masks) is list:

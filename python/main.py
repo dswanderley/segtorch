@@ -53,6 +53,10 @@ if __name__ == '__main__':
     opt = 'adam'
     loss = 'dsc'
     network_name = 'Unet2'
+    bilinear = False
+    clahe = False
+    interaction = False
+    in_channels = 1
              
     if(len(sys.argv)>1):
         n_epochs = int(sys.argv[1])
@@ -73,12 +77,19 @@ if __name__ == '__main__':
     if(len(sys.argv)>5):
         network_name = str(sys.argv[5])
     print('net name:', network_name)
-
-    if network_name == 'Unet2':
-        bilinear = False
-    else:
+    
+    if 'b' in network_name:
         bilinear = True
     print('bilinear:', bilinear)
+
+    if clahe:
+        in_channels += 1
+    print('clahe:', clahe)
+
+    if 'i' in network_name:
+        interaction = True
+        in_channels += 1
+    print('interaction:', interaction)
 
     print('---------------------------')
     print('')
@@ -90,7 +101,7 @@ if __name__ == '__main__':
     logger = Logger('../logs/' + train_name + '/')
 
     # Load Unet
-    model = Unet2(n_channels=1, n_classes=3, bilinear=bilinear)
+    model = Unet2(n_channels=in_channels, n_classes=3, bilinear=bilinear)
     #print(net)
 
     # Load CUDA if exist
@@ -102,9 +113,9 @@ if __name__ == '__main__':
                            tsfrm.RandomAffine(90, translate=(0.15, 0.15), scale=(0.75, 1.5), resample=3, fillcolor=0)
                            ])
     # Dataset definitions
-    dataset_train = OvaryDataset(im_dir='../dataset/im/train/', gt_dir='../dataset/gt/train/', transform=transform)
-    dataset_val = OvaryDataset(im_dir='../dataset/im/val/', gt_dir='../dataset/gt/val/')
-    dataset_test = OvaryDataset(im_dir='../dataset/im/test/', gt_dir='../dataset/gt/test/')
+    dataset_train = OvaryDataset(im_dir='../dataset/im/train/', gt_dir='../dataset/gt/train/', transform=transform, imap=interaction, clahe=clahe)
+    dataset_val = OvaryDataset(im_dir='../dataset/im/val/', gt_dir='../dataset/gt/val/', imap=interaction, clahe=clahe)
+    dataset_test = OvaryDataset(im_dir='../dataset/im/test/', gt_dir='../dataset/gt/test/', imap=interaction, clahe=clahe)
 
     # Training Parameters
     if opt == 'adam':
