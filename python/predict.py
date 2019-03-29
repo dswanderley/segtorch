@@ -69,35 +69,21 @@ class Inference():
         '''
 
         self.model.eval()
+        self.model = self.model.to(self.device)
+
         dsc_data = []
         dsc_data.append(['name', 'backgound', 'stroma', 'follicles'])
 
         data_loader = DataLoader(images, batch_size=1, shuffle=False)
         for _, sample in enumerate(data_loader):
             # Load data
-            image = sample['image']
-            gt_mask = sample['gt_mask']
+            image = sample['image'].to(self.device)
+            gt_mask = sample['gt_mask'].to(self.device)
             im_name = sample['im_name']
 
             # Handle input
             if len(image.size()) < 4:
                 image.unsqueeze_(1) # add a dimension to the tensor
-            else:
-                image = image.permute(0, 3, 1, 2).contiguous()
-
-            # Handle with ground truth
-            if len(gt_mask.size()) < 4:
-                groundtruth = gt_mask.long()
-            else:
-                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
-
-            # Active GPU
-            if torch.cuda.is_available():
-                self.model = self.model.to(self.device)
-                image = image.to(self.device)
-                groundtruth = groundtruth.to(self.device)
-                #ov_mask = ov_mask.to(self.device)
-                #fol_mask = fol_mask.to(self.device)
 
             # Prediction
             pred = self.model(image)
@@ -109,17 +95,18 @@ class Inference():
             pred_final = torch.where(pred < t, \
                     torch.zeros(pred.shape).to(self.device), \
                     torch.ones(pred.shape).to(self.device))
+            # Evaluate - dice
+            dsc = self.criterion(pred_final, gt_mask)
 
-            dsc = self.criterion(pred_final, groundtruth)
-
+            # Display evaluation
             iname = im_name[0]
             dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item()])
-
+            
             print(iname)
             print('Stroma DSC:    {:f}'.format(dsc[1]))
             print('Follicle DSC:  {:f}'.format(dsc[2]))
             print('')
-
+            # Save prediction
             img_out = pred_final[0].detach().cpu().permute(1,2,0).numpy()
             Image.fromarray((255*img_out).astype(np.uint8)).save(self.pred_folder + iname)
 

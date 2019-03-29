@@ -15,8 +15,8 @@ class Training:
         Training classe
     """
 
-    def __init__(self, model, device, train_set, valid_set,
-                opt, loss, logger=None, train_name='net'):
+    def __init__(self, model, device, train_set, valid_set, opt, loss,
+                  target='gt_mask', loss_weights=None, train_name='net', logger=None):
         '''
             Training class - Constructor
         '''
@@ -28,6 +28,21 @@ class Training:
         self.criterion = loss
         self.logger = logger
         self.train_name = train_name
+        if type(target) == list:
+            self.target = target
+        else:
+            self.target = [target]
+        self.n_out = len(self.target)
+        if loss_weights == None:
+            if self.n_out == 3:
+                self.loss_weights = [.5, 0.25, 0.25]
+            elif self.n_out == 2:
+                self.loss_weights = [.75, 0.25]
+            else:
+                self.loss_weights = 1.
+        else:
+            self.loss_weights = 1.
+
 
     def _saveweights(self, state):
         '''
@@ -49,55 +64,47 @@ class Training:
 
         # Active train
         self.model.train()
+        self.model = self.model.to(self.device)
 
         # Batch iteration - Training dataset
         for batch_idx, sample in enumerate(data_loader_train):
             
             # Load data
-            image = sample['image']
-            gt_mask = sample['gt_mask']
-            #gt_mask = sample['follicle_instances']
+            image = sample['image'].to(self.device)
+            tgt_mask = []
+            for tgt_str in self.target:
+                tgt_mask.append(sample[tgt_str].to(self.device))
             
             # Handle input
             if len(image.size()) < 4:
                 image.unsqueeze_(1) # add a dimension to the tensor
-            else:
-                image = image.permute(0, 3, 1, 2).contiguous()
-
-            # Handle with ground truth
-            if len(gt_mask.size()) < 4:
-                groundtruth = gt_mask.long()
-            else:
-                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
-
-            # Active GPU train
-            if torch.cuda.is_available():
-                self.model = self.model.to(self.device)
-                image = image.to(self.device)
-                groundtruth = groundtruth.to(self.device)
-                #ov_mask = ov_mask.to(self.device)
-                #fol_mask = fol_mask.to(self.device)
 
             # Run prediction            
             pred_masks = self.model(image)
             # Handle multiples outputs
             if type(pred_masks) is list:
-                pred_masks = pred_masks[0]
-                #pred_masks = pred_masks[1]
+                prediction = pred_masks[0]
+                losses = []
+                for k in range(len(pred_masks)):
+                    losses.append(self.criterion(pred_masks[k], tgt_mask[k]) * self.loss_weights[k])
+                loss = sum(losses)
+            else:
+                prediction = pred_masks
+                # Calculate loss for each batch
+                loss = self.criterion(pred_masks, tgt_mask[0])
 
-            # Output preview
-            if batch_idx == len(data_loader_train) - 1:
-                ref_image_train = image[0,...]
-                ref_pred_train = pred_masks[0,...]
-
-            # Calculate loss for each batch
-            loss = self.criterion(pred_masks, groundtruth)
+            # Update epoch loss
             loss_train_sum += len(image) * loss.item()
 
             # Update weights
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+
+            # Output preview
+            if batch_idx == len(data_loader_train) - 1:
+                ref_image_train = image[0,...]
+                ref_pred_train = prediction[0,...]
 
         # Calculate average loss per epoch
         avg_loss_train = loss_train_sum / data_train_len
@@ -113,49 +120,33 @@ class Training:
 
         # To evaluate on validation set
         self.model.eval()
+        self.model = self.model.to(self.device)
 
         # Batch iteration - Validation dataset
         for batch_idx, sample in enumerate(data_loader_val):
             # Load data
-            image = sample['image']
-            gt_mask = sample['gt_mask']
-            #gt_mask = sample['follicle_instances']
+            image = sample['image'].to(self.device)
+            gt_mask = sample['gt_mask'].to(self.device)
 
             # Handle input
             if len(image.size()) < 4:
                 image.unsqueeze_(1) # add a dimension to the tensor
-            else:
-                image = image.permute(0, 3, 1, 2).contiguous()
-
-            # Handle with ground truth
-            if len(gt_mask.size()) < 4:
-                groundtruth = gt_mask.long()
-            else:
-                groundtruth = gt_mask.permute(0, 3, 1, 2).contiguous()
-
-            # Active GPU
-            if torch.cuda.is_available():
-                self.model = self.model.to(self.device)
-                image = image.to(self.device)
-                groundtruth = groundtruth.to(self.device)
-                #ov_mask = ov_mask.to(self.device)
-                #fol_mask = fol_mask.to(self.device)
 
             # Prediction
             self.optimizer.zero_grad()
-            val_masks = self.model(image)
+            pred = self.model(image)
             # Handle multiples outputs
-            if type(val_masks) is list:
-                val_masks = val_masks[0]
+            if type(pred) is list:
+                pred = pred[0]
+
+            # Calculate loss for each batch
+            val_loss = self.criterion(pred, gt_mask)
+            loss_val_sum += len(image) * val_loss.item()
 
             # Print output preview
             if batch_idx == len(data_loader_val) - 1:
                 ref_image_val = image[0,...]
-                ref_pred_val = val_masks[0,...]
-
-            # Calculate loss for each batch
-            val_loss = self.criterion(val_masks, groundtruth)
-            loss_val_sum += len(image) * val_loss.item()
+                ref_pred_val = pred[0,...]
 
         # Calculate average validation loss per epoch
         avg_loss_val = loss_val_sum / data_val_len

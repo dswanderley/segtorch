@@ -76,7 +76,6 @@ if __name__ == '__main__':
     parser.add_argument('--bilinear', type=bool, default=False,
                         help='whether to use bilinear upsampling should be used instead of Transpose Conv. (default: False)')
 
-
     # Parse input data
     args = parser.parse_args()
 
@@ -94,7 +93,7 @@ if __name__ == '__main__':
 
     network_name = net_type
 
-    # Manage network input
+    # Manage network input - Ovarian dataset parameters
     if dataset_name == 'ovarian':
         in_channels = 1
     else:
@@ -107,18 +106,23 @@ if __name__ == '__main__':
         interaction = [1., 0.5]
         in_channels += 1
         network_name = 'i' + network_name
-
+    
+    multitask = 'both'
     if multitask == 'ovarian':
         n_classes = [3,2]
+        target = ['gt_mask', 'ovary_mask']
         network_name += '_ovar'
     elif multitask == 'follicle':
         n_classes = [3,2]
+        target = ['gt_mask', 'follicle_mask']
         network_name += '_foll'
     elif multitask == 'both':
         n_classes = [3,2,2]
+        target = ['gt_mask', 'ovary_mask', 'follicle_mask']
         network_name += '_both'
     else:
         n_classes = 3
+        target = 'gt_mask'
 
     print(network_name)
     print('output classes:', n_classes)
@@ -167,7 +171,8 @@ if __name__ == '__main__':
 
     # Run training
     training = Training(model, device, dataset_train, dataset_val,
-                        optmizer, loss_function, logger=logger, train_name=train_name)
+                        optmizer, loss_function, target=target,
+                        logger=logger, train_name=train_name)
     training.train(epochs=n_epochs, batch_size=batch_size)
     print('------------- END OF TRAINING -------------')
     print(' ')
