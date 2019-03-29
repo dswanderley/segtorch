@@ -284,12 +284,33 @@ class OvaryDataset(Dataset):
         #Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
 
         # Convert to torch (to be used on DataLoader)
+
+        torch_im = torch.from_numpy(im_np)
+        if len(torch_im.shape) > 2:
+            torch_im = torch_im.permute(2, 0, 1).contiguous()
+
+        torch_gt = torch.from_numpy(gt_mask)
+        if len(torch_gt.shape) > 2:
+            torch_gt = torch_gt.permute(2, 0, 1).contiguous()
+
+        torch_ov = torch.from_numpy(ov_mask)
+        if len(torch_ov.shape) > 2:
+            torch_ov = torch_ov.permute(2, 0, 1).contiguous()
+
+        torch_fl = torch.from_numpy(fol_mask)
+        if len(torch_fl.shape) > 2:
+            torch_fl = torch_fl.permute(2, 0, 1).contiguous()
+
+        torch_is = torch.from_numpy(inst_mask)
+        if len(torch_is.shape) > 2:
+            torch_is = torch_is.permute(2, 0, 1).contiguous()
+
         sample =  { 'im_name': im_name,
-                    'image': torch.from_numpy(im_np),
-                    'gt_mask': torch.from_numpy(gt_mask),
-                    'ovary_mask': torch.from_numpy(ov_mask),
-                    'follicle_mask': torch.from_numpy(fol_mask),
-                    'follicle_instances': torch.from_numpy(inst_mask),
+                    'image': torch_im,
+                    'gt_mask': torch_gt,
+                    'ovary_mask': torch_ov,
+                    'follicle_mask': torch_fl,
+                    'follicle_instances': torch_is,
                     'num_follicles':  num_inst }
 
         return sample
