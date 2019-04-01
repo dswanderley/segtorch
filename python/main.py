@@ -107,7 +107,6 @@ if __name__ == '__main__':
         in_channels += 1
         network_name = 'i' + network_name
     
-    multitask = 'both'
     if multitask == 'ovarian':
         n_classes = [3,2]
         target = ['gt_mask', 'ovary_mask']
