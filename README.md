@@ -1,2 +1,2 @@
-# utorch
-U-net using PyTorch
+# segtorch
+Semantic segmentation using PyTorch.
