@@ -59,7 +59,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=3,
                         help='batch size (default: 3)')
     parser.add_argument('--dataset', type=str, default='ovarian',
-                        choices=['ovarian, voc2012'],
+                        choices=['ovarian', 'voc2012'],
                         help='select dataset, it also defines the input depth and the output classes (default: ovarian)')
     parser.add_argument('--multitask', type=str, default='none',
                         choices=['none', 'ovary', 'follicle', 'both'],
