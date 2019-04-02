@@ -417,10 +417,10 @@ class VOC2012Dataset(Dataset):
         h, w, d = im_np.shape
         im_square = np.zeros((self.height, self.width, d))
 
-        p_left = round((self.width - w) / 2)
-        p_right = p_left + w
-        p_top = round((self.height - h) / 2)
-        p_down = p_top + h
+        p_left = int(round((self.width - w) / 2))
+        p_right = int(p_left + w)
+        p_top = int(round((self.height - h) / 2))
+        p_down = int(p_top + h)
         
         im_box = {'top': p_top,
                 'bottom': p_down,
