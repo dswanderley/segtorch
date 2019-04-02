@@ -118,7 +118,7 @@ if __name__ == '__main__':
         in_channels = 3
         n_classes = 22
         target = 'gt_mask'
-        network_name += 'voc2012'
+        network_name += '_voc2012'
 
     if clahe:
         in_channels += 1
@@ -130,6 +130,7 @@ if __name__ == '__main__':
     
 
     print(network_name)
+    print('dataset:', dataset_name)
     print('output classes:', n_classes)
     print('epochs:', n_epochs)
     print('batch size:', batch_size)

@@ -457,11 +457,11 @@ class VOC2012Dataset(Dataset):
         #Image.fromarray((255*im_np).astype(np.uint8)).save("im_np.png")
         #Image.fromarray((255*gt_mask).astype(np.uint8)).save("gt_all.png")
 
-        torch_im = torch.from_numpy(im_square)
+        torch_im = torch.from_numpy(im_square.astype(np.float32))
         if len(torch_im.shape) > 2:
             torch_im = torch_im.permute(2, 0, 1).contiguous()
 
-        torch_gt = torch.from_numpy(gt_square)
+        torch_gt = torch.from_numpy(gt_square.astype(np.float32))
         if len(torch_gt.shape) > 2:
             torch_gt = torch_gt.permute(2, 0, 1).contiguous()
       
