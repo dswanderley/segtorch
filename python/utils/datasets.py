@@ -316,7 +316,7 @@ class OvaryDataset(Dataset):
         return sample
 
 
-class VOC2012(Dataset):
+class VOC2012Dataset(Dataset):
     """
     Dataset of Pascal VCO 2012 images.
     """
@@ -473,4 +473,3 @@ class VOC2012(Dataset):
                     'im_box':  im_box }
 
         return sample
-

@@ -21,7 +21,7 @@ import utils.transformations as tsfrm
 from torch import optim
 from utils.logger import Logger
 from nets.unet import Unet2
-from utils.datasets import OvaryDataset
+from utils.datasets import OvaryDataset, VOC2012Dataset
 from utils.losses import DiceLoss, DiscriminativeLoss
 from train import Training
 from predict import Inference
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=3,
                         help='batch size (default: 3)')
     parser.add_argument('--dataset', type=str, default='ovarian',
-                        choices=['ovarian'],
+                        choices=['ovarian, voc2012'],
                         help='select dataset, it also defines the input depth and the output classes (default: ovarian)')
     parser.add_argument('--multitask', type=str, default='none',
                         choices=['none', 'ovary', 'follicle', 'both'],
@@ -97,8 +97,28 @@ if __name__ == '__main__':
     # Manage network input - Ovarian dataset parameters
     if dataset_name == 'ovarian':
         in_channels = 1
+        # Multitask
+        if multitask == 'ovarian':
+            n_classes = [3,2]
+            target = ['gt_mask', 'ovary_mask']
+            network_name += '_ovar'
+        elif multitask == 'follicle':
+            n_classes = [3,2]
+            target = ['gt_mask', 'follicle_mask']
+            network_name += '_foll'
+        elif multitask == 'both':
+            n_classes = [3,2,2]
+            target = ['gt_mask', 'ovary_mask', 'follicle_mask']
+            network_name += '_both'
+        else:
+            n_classes = 3
+            target = 'gt_mask'
+    # VOC 2012
     else:
-        in_channels = 1
+        in_channels = 3
+        n_classes = 22
+        target = 'gt_mask'
+        network_name += 'voc2012'
 
     if clahe:
         in_channels += 1
@@ -108,21 +128,6 @@ if __name__ == '__main__':
         in_channels += 1
         network_name = 'i' + network_name
     
-    if multitask == 'ovarian':
-        n_classes = [3,2]
-        target = ['gt_mask', 'ovary_mask']
-        network_name += '_ovar'
-    elif multitask == 'follicle':
-        n_classes = [3,2]
-        target = ['gt_mask', 'follicle_mask']
-        network_name += '_foll'
-    elif multitask == 'both':
-        n_classes = [3,2,2]
-        target = ['gt_mask', 'ovary_mask', 'follicle_mask']
-        network_name += '_both'
-    else:
-        n_classes = 3
-        target = 'gt_mask'
 
     print(network_name)
     print('output classes:', n_classes)
@@ -152,10 +157,20 @@ if __name__ == '__main__':
                            tsfrm.RandomAffine(90, translate=(0.15, 0.15), scale=(0.75, 1.5), resample=3, fillcolor=0)
                            ])
     # Dataset definitions
-    dataset_train = OvaryDataset(im_dir='../dataset/im/train/',gt_dir='../dataset/gt/train/',  imap=interaction, clahe=clahe, transform=transform)
-    dataset_val =   OvaryDataset(im_dir='../dataset/im/val/',   gt_dir='../dataset/gt/val/',    imap=interaction, clahe=clahe)
-    dataset_test =  OvaryDataset(im_dir='../dataset/im/test/',  gt_dir='../dataset/gt/test/',   imap=interaction, clahe=clahe)
-
+    if dataset_name == 'ovarian':
+        im_dir = '../datasets/ovarian/im/'
+        gt_dir = '../datasets/ovarian/gt/'
+        dataset_train = OvaryDataset(im_dir=im_dir+'train/',gt_dir=gt_dir+'train/',  imap=interaction, clahe=clahe, transform=transform)
+        dataset_val =   OvaryDataset(im_dir=im_dir+'val/',  gt_dir=gt_dir+'val/',    imap=interaction, clahe=clahe)
+        dataset_test =  OvaryDataset(im_dir=im_dir+'test/', gt_dir=gt_dir+'test/',   imap=interaction, clahe=clahe)
+    else:
+        im_dir = '../datasets/voc2012/JPEGImages/'
+        gt_dir = '../datasets/voc2012/SegmentationClass/'
+        list_dir = '../datasets/voc2012/'
+        dataset_train = VOC2012Dataset(im_dir=im_dir, gt_dir=gt_dir, file_list=list_dir+'train.txt')
+        dataset_val =   VOC2012Dataset(im_dir=im_dir, gt_dir=gt_dir, file_list=list_dir+'val.txt')
+        dataset_test =  VOC2012Dataset(im_dir=im_dir, gt_dir=gt_dir, file_list=list_dir+'val.txt')
+        
     # Training Parameters
     if opt == 'adam':
         optmizer = optim.Adam(model.parameters(), lr=0.001)
