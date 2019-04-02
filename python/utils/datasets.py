@@ -314,3 +314,163 @@ class OvaryDataset(Dataset):
                     'num_follicles':  num_inst }
 
         return sample
+
+
+class VOC2012(Dataset):
+    """
+    Dataset of Pascal VCO 2012 images.
+    """
+
+    def __init__(self, im_dir, gt_dir, file_list, one_hot=True, transform=None):
+        """
+        Args:
+            im_dir (string): Directory with all the images.
+            gt_dir (string): Directory with all the masks, with the same name of
+            the original images.
+            on_hot (bool): Optional output encoding one-hot-encoding or gray levels
+            transform (callable, optional): Optional transform to be applied
+                on a sample.
+        """
+        self.im_dir = im_dir
+        self.gt_dir = gt_dir
+        self.transform = transform
+        self.one_hot = one_hot
+        self.n_classes = 20+2
+        self.height = 512
+        self.width = 512
+        self.colormap = [[ 0,   0,   0], # backgroud
+                        [128,   0,   0], # aeroplane
+                        [  0, 128,   0], # bicycle
+                        [128, 128,   0], # bird
+                        [  0,   0, 128], # boat
+                        [128,   0, 128], # bottle
+                        [  0, 128, 128], # bus
+                        [128, 128, 128], # car
+                        [ 64,   0,   0], # cat
+                        [192,   0,   0], # chair
+                        [ 64, 128,   0], # cow
+                        [192, 128,   0], # diningtable
+                        [ 64,   0, 128], # dog
+                        [192,   0, 128], # horse
+                        [ 64, 128, 128], # motorbike
+                        [192, 128, 128], # person
+                        [  0,  64,   0], # potterdplant
+                        [128,  64,   0], # sheep
+                        [  0, 192,   0], # sofa
+                        [128, 192,   0], # train
+                        [  0,  64, 128], # tv monitor
+                        [224, 224, 192], # void
+                        ]
+                        
+        with open(file_list) as f:
+            flist = f.read().splitlines()
+        self.images_name = flist
+
+
+    def __len__(self):
+        """
+            Get dataset length.
+        """
+        return len(self.images_name)
+
+
+    def __getitem__(self, idx):
+        """
+            Get batch of images and related data.
+
+            Args:
+                @idx (int): file index.
+            Returns:
+                @sample (dict): im_name, image, gt_mask, ovary_mask,
+                    follicle_mask, follicle_instances, num_follicles.
+        """
+
+        '''
+            Output encoding preparation
+        '''
+        # Output encod accepts two types: one-hot-encoding or gray scale levels
+
+        '''
+            Load images
+        '''
+        # Image names: equal for original image and ground truth image
+        im_name = self.images_name[idx] 
+        jpg_name = im_name + '.jpg'
+        # Load Original Image (RGB)
+        im_path = os.path.join(self.im_dir, jpg_name)    # PIL image in [0,255], 1 channel
+        image = Image.open(im_path)
+        # Ground Truth Image
+        gt_name = im_name + '.png'
+        # Load Ground Truth  Image (RGB)
+        gt_path = os.path.join(self.gt_dir, gt_name)    # PIL image in [0,255], 1 channel
+        gt_im = Image.open(gt_path)
+
+        # Apply transformations
+        if self.transform:
+            image, gt_im = self.transform(image, gt_im)
+
+        '''
+            Input Image preparation
+        '''
+        # Image to array
+        im_np = np.array(image).astype(np.float32) / 255.
+        h, w, d = im_np.shape
+        im_square = np.zeros((self.height, self.width, d))
+
+        p_left = round((self.width - w) / 2)
+        p_right = p_left + w
+        p_top = round((self.height - h) / 2)
+        p_down = p_top + h
+        
+        im_box = {'top': p_top,
+                'bottom': p_down,
+                'left': p_left,
+                'right': p_right}
+
+        im_square[p_top:p_down, p_left:p_right, :] = im_np
+
+
+        '''
+            Main Ground Truth preparation - Gray scale GT and Multi-channels GT
+        '''
+        # Grouth truth to array
+        gt_np = np.array(gt_im).astype(np.float32)
+        # Get class with more incidences
+        hist = gt_im.histogram()
+        main_class = np.argmax(hist[1:-1]) + 1 # ignore void and background
+        # Apply gt to square
+        gt_square_p = np.zeros((self.height, self.width))
+        gt_square_p[p_top:p_down, p_left:p_right] = gt_np
+        # Define lables from 0 (background) to n_classes-1 and add void idx
+        labels_idx = list(range(self.n_classes-1)) +  [255]
+        if self.one_hot:                    
+            gt_square = np.zeros((self.height, self.width, self.n_classes))     
+            for c in range(self.n_classes):
+                mask = np.zeros((gt_square.shape[0], gt_square.shape[1]))
+                mask[(gt_square_p == labels_idx[c])] = 1.
+                gt_square[...,c] = mask
+        else:
+            gt_square = gt_square_p
+            gt_square[gt_square_p == 255] = self.n_classes-1
+
+        # Print data if necessary
+        #Image.fromarray((255*im_np).astype(np.uint8)).save("im_np.png")
+        #Image.fromarray((255*gt_mask).astype(np.uint8)).save("gt_all.png")
+
+        torch_im = torch.from_numpy(im_square)
+        if len(torch_im.shape) > 2:
+            torch_im = torch_im.permute(2, 0, 1).contiguous()
+
+        torch_gt = torch.from_numpy(gt_square)
+        if len(torch_gt.shape) > 2:
+            torch_gt = torch_gt.permute(2, 0, 1).contiguous()
+      
+
+        sample =  { 'im_name': im_name,
+                    'image': torch_im,
+                    'gt_mask': torch_gt,
+                    'main_class': main_class,
+                    'im_box':  im_box }
+
+        return sample
+

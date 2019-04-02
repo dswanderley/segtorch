@@ -46,6 +46,7 @@ def gettrainname(name):
     # log name - eg: both
     return tm_str + '_' + name
 
+
 # Main calls
 if __name__ == '__main__':
 
