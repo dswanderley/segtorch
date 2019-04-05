@@ -20,6 +20,7 @@ import utils.transformations as tsfrm
 
 from torch import optim
 from utils.logger import Logger
+from nets.gcn import GCN
 from nets.unet import Unet2
 from utils.datasets import OvaryDataset, VOC2012Dataset
 from utils.losses import DiceLoss, DiscriminativeLoss
@@ -52,7 +53,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PyTorch U-net training and prediction.")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['unet2', 'unet'],
+                        choices=['unet2', 'unet', 'gcn'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs (default: 1)')
@@ -145,8 +146,11 @@ if __name__ == '__main__':
     # Set logs folder
     logger = Logger('../logs/' + train_name + '/')
 
-    # Load Unet
-    model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
+    # Load Network model
+    if net_type == 'gcn':
+        model = GCN(n_channels=in_channels, n_classes=n_classes)
+    else:
+        model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     #print(net)
 
     # Load CUDA if exist
