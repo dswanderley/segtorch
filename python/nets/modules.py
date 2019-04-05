@@ -46,7 +46,7 @@ class fwdconv(nn.Module):
         self.stride = stride
         self.padding = padding
         self.conv = nn.Sequential()
-        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size, stride=stride, padding=padding))
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size, stride=stride, padding=padding)
         if batch_norm:
             self.conv.add_module("bnorm_1", nn.BatchNorm2d(out_ch))
         if dropout > 0:
