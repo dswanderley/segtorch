@@ -82,11 +82,11 @@ class GCN(nn.Module):
         dc_x0 = self.bn0(dc_x0)
         dc_x0 = self.relu0(dc_x0)
         # downstream
-        dc_x0 = self.maxpool0(dc_x0)   # 512x512 -> 256x256
-        dc_x1 = self.resnet1(c_x0)  # 256x256 -> 128x128
-        dc_x2 = self.resnet2(dc_x1) # 128x128 -> 64 x 64
-        dc_x3 = self.resnet3(dc_x2) # 64 x 64 -> 32 x 32
-        dc_x4 = self.resnet4(dc_x3) # 32 x 32 -> 16 x16
+        dc_x0 = self.maxpool0(dc_x0)    # 512x512 -> 256x256
+        dc_x1 = self.resnet1(dc_x0)     # 256x256 -> 128x128
+        dc_x2 = self.resnet2(dc_x1)     # 128x128 -> 64 x 64
+        dc_x3 = self.resnet3(dc_x2)     # 64 x 64 -> 32 x 32
+        dc_x4 = self.resnet4(dc_x3)     # 32 x 32 -> 16 x16
 
         # skip conections with global convs
         sc_x1 = self.gcn1(dc_x1)
