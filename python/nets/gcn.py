@@ -90,9 +90,9 @@ class GCN(nn.Module):
 
         # skip conections with global convs
         sc_x1 = self.gcn1(dc_x1)
-        sc_x2 = self.gcn1(dc_x2)
-        sc_x3 = self.gcn1(dc_x3)
-        sc_x4 = self.gcn1(dc_x4)
+        sc_x2 = self.gcn2(dc_x2)
+        sc_x3 = self.gcn3(dc_x3)
+        sc_x4 = self.gcn4(dc_x4)
         # 
         sc_x1 = self.br1(sc_x1)
         sc_x2 = self.br2(sc_x2)
