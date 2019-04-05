@@ -26,7 +26,7 @@ class GCN(nn.Module):
         self.n_classes = n_classes
 
         # Input conv is applied to convert the input to 3 ch depth
-        self.inconv = fwdconv(n_channels, 3, kernel_size=1)
+        self.inconv = fwdconv(n_channels, 3, kernel_size=1, padding=0)
 
         # Load Resnet
         resnet = models.resnet50(pretrained=True)

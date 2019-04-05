@@ -38,13 +38,15 @@ class fwdconv(nn.Module):
     '''
     Foward convolution layer
     '''
-    def __init__(self, in_ch, out_ch, kernel_size=3, batch_norm=True, dropout=0):
+    def __init__(self, in_ch, out_ch, kernel_size=3, stride=1, padding=1, batch_norm=True, dropout=0):
         ''' Constructor '''
         super(fwdconv, self).__init__()
         # Set conv layer
         self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
         self.conv = nn.Sequential()
-        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size, stride=1, padding=1))
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size, stride=stride, padding=padding))
         if batch_norm:
             self.conv.add_module("bnorm_1", nn.BatchNorm2d(out_ch))
         if dropout > 0:
@@ -149,7 +151,7 @@ class globalconv(nn.Module):
         # Left side
         self.conv_left = nn.Sequential()
         # Conv 1
-        self.conv_left.add_module("conv_l_1", nn.Conv2d(in_ch, m_ch, kernel_size=(k,1), padding =((k-1)/2,0)))
+        self.conv_left.add_module("conv_l_1", nn.Conv2d(in_ch, m_ch, kernel_size=(k,1), padding=((k-1)/2,0)))
         if batch_norm:
             self.conv_left.add_module("bnorm_l_1",nn.BatchNorm2d(m_ch))
         if dropout > 0:
@@ -157,7 +159,7 @@ class globalconv(nn.Module):
         if reg:
             self.conv_left.add_module("relu_l_1",nn.ReLU(inplace=True))
         # Conv 2
-        self.conv_left.add_module("conv_l_2", nn.Conv2d(m_ch, m_ch, kernel_size=(1,k), padding =(0,(k-1)/2)))
+        self.conv_left.add_module("conv_l_2", nn.Conv2d(m_ch, m_ch, kernel_size=(1,k), padding=(0,(k-1)/2))
         if batch_norm:
             self.conv_left.add_module("bnorm_l_2",nn.BatchNorm2d(m_ch))
         if dropout > 0:
@@ -168,14 +170,14 @@ class globalconv(nn.Module):
         # Right side
         self.conv_right = nn.Sequential()
         # Conv 1
-        self.conv_right.add_module("conv_r_1", nn.Conv2d(in_ch, m_ch, kernel_size=(1,k), padding =((k-1)/2,0)))
+        self.conv_right.add_module("conv_r_1", nn.Conv2d(in_ch, m_ch, kernel_size=(1,k), padding=(0,(k-1)/2))
         if batch_norm:
             self.conv_right.add_module("bnorm_r_1",nn.BatchNorm2d(m_ch))
         if dropout > 0:
             self.conv_right.add_module("dropout_r_1", nn.Dropout2d(dropout))
         self.conv_right.add_module("relu_r_1",nn.ReLU(inplace=True))
         # Conv 2
-        self.conv_right.add_module("conv_r_2", nn.Conv2d(m_ch, m_ch, kernel_size=(k,1), padding =(0,(k-1)/2)))
+        self.conv_right.add_module("conv_r_2", nn.Conv2d(m_ch, m_ch, kernel_size=(k,1), padding=((k-1)/2,0))
         if batch_norm:
             self.conv_right.add_module("bnorm_r_2",nn.BatchNorm2d(m_ch))
         if dropout > 0:
@@ -234,12 +236,12 @@ class brconv(nn.Module):
         # Refined side
         self.conv_ref = nn.Sequential()
         # Conv 1 - 3x3 + Relu
-        self.conv_ref.add_module("conv_1",  nn.Conv2d(out_ch, out_ch, kernel_size=3,padding=1))
+        self.conv_ref.add_module("conv_1",  nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1))
         if bnorm:
             self.conv_ref.add_module("bnorm_1", nn.BatchNorm2d(out_ch))
         self.conv_ref.add_module("relu", nn.ReLU(inplace=True))
         # Conv 2 - 3x3
-        self.conv_ref.add_module("conv_2", nn.Conv2d(out_ch,out_ch, kernel_size=3,padding=1))
+        self.conv_ref.add_module("conv_2", nn.Conv2d(out_ch,out_ch, kernel_size=3, padding=1))
         if bnorm:
             self.conv_ref.add_module("bnorm_2", nn.BatchNorm2d(out_ch))
         
