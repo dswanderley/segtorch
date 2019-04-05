@@ -35,7 +35,7 @@ class GCN(nn.Module):
         self.conv0 = resnet.conv1 # Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
         self.bn0 = resnet.bn1 # BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.relu0 = resnet.relu
-        self.maxpool0 = resnet.maxpool # MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+        self.maxpool = resnet.maxpool # MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
 
         # Resnet layers
         self.resnet1 = resnet.layer1 # res-2 -> (depth) in:   64, out:  256
@@ -78,12 +78,12 @@ class GCN(nn.Module):
         c_x0 = self.inconv(x)
 
         # Resnet 
-        dc_x0 = self.conv0(c_x0)    
+        dc_x0 = self.conv0(c_x0)    # 512x512 -> 256x256
         dc_x0 = self.bn0(dc_x0)
         dc_x0 = self.relu0(dc_x0)
         # downstream
-        dc_x0 = self.maxpool0(dc_x0)    # 512x512 -> 256x256
-        dc_x1 = self.resnet1(dc_x0)     # 256x256 -> 128x128
+        dc_x1 = self.maxpool(dc_x0)
+        dc_x1 = self.resnet1(dc_x1)     # 256x256 -> 128x128
         dc_x2 = self.resnet2(dc_x1)     # 128x128 -> 64 x 64
         dc_x3 = self.resnet3(dc_x2)     # 64 x 64 -> 32 x 32
         dc_x4 = self.resnet4(dc_x3)     # 32 x 32 -> 16 x16
@@ -121,4 +121,4 @@ class GCN(nn.Module):
         # output
         x_out = self.softmax(uc_x5_r)             
 
-        return x
+        return x_out

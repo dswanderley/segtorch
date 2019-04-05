@@ -146,12 +146,13 @@ class globalconv(nn.Module):
         self.reg = reg
         self.batch_norm = batch_norm
         self.dropout = dropout
+        pad = int((k-1)/2)
         if out_ch == None:
             out_ch = m_ch
         # Left side
         self.conv_left = nn.Sequential()
         # Conv 1
-        self.conv_left.add_module("conv_l_1", nn.Conv2d(in_ch, m_ch, kernel_size=(k,1), padding=((k-1)/2,0)))
+        self.conv_left.add_module("conv_l_1", nn.Conv2d(in_ch, m_ch, kernel_size=(k,1), padding=(pad,0)))
         if batch_norm:
             self.conv_left.add_module("bnorm_l_1",nn.BatchNorm2d(m_ch))
         if dropout > 0:
@@ -159,7 +160,7 @@ class globalconv(nn.Module):
         if reg:
             self.conv_left.add_module("relu_l_1",nn.ReLU(inplace=True))
         # Conv 2
-        self.conv_left.add_module("conv_l_2", nn.Conv2d(m_ch, m_ch, kernel_size=(1,k), padding=(0,(k-1)/2))
+        self.conv_left.add_module("conv_l_2", nn.Conv2d(m_ch, m_ch, kernel_size=(1,k), padding=(0,pad)))
         if batch_norm:
             self.conv_left.add_module("bnorm_l_2",nn.BatchNorm2d(m_ch))
         if dropout > 0:
@@ -170,16 +171,16 @@ class globalconv(nn.Module):
         # Right side
         self.conv_right = nn.Sequential()
         # Conv 1
-        self.conv_right.add_module("conv_r_1", nn.Conv2d(in_ch, m_ch, kernel_size=(1,k), padding=(0,(k-1)/2))
+        self.conv_right.add_module("conv_r_1", nn.Conv2d(in_ch, m_ch, kernel_size=(1,k), padding=(0,pad)))
         if batch_norm:
             self.conv_right.add_module("bnorm_r_1",nn.BatchNorm2d(m_ch))
         if dropout > 0:
             self.conv_right.add_module("dropout_r_1", nn.Dropout2d(dropout))
         self.conv_right.add_module("relu_r_1",nn.ReLU(inplace=True))
         # Conv 2
-        self.conv_right.add_module("conv_r_2", nn.Conv2d(m_ch, m_ch, kernel_size=(k,1), padding=((k-1)/2,0))
+        self.conv_right.add_module("conv_r_2", nn.Conv2d(m_ch, m_ch, kernel_size=(k,1), padding=(pad,0)))
         if batch_norm:
-            self.conv_right.add_module("bnorm_r_2",nn.BatchNorm2d(m_ch))
+            self.conv_right.add_module("bnorm_r_2", nn.BatchNorm2d(m_ch))
         if dropout > 0:
             self.conv_right.add_module("dropout_r_2", nn.Dropout2d(dropout))
         if reg:
