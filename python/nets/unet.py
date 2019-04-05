@@ -4,10 +4,9 @@ Created on Sun Nov 28 11:33:30 2018
 
 @author: Diego Wanderley
 @python: 3.6
-@description: U-net modules and network
+@description: U-net networks models
 """
 
-from __future__ import print_function
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

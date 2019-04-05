@@ -38,12 +38,13 @@ class fwdconv(nn.Module):
     '''
     Foward convolution layer
     '''
-    def __init__(self, in_ch, out_ch, batch_norm=True, dropout=0):
+    def __init__(self, in_ch, out_ch, kernel_size=3, batch_norm=True, dropout=0):
         ''' Constructor '''
         super(fwdconv, self).__init__()
         # Set conv layer
+        self.kernel_size = kernel_size
         self.conv = nn.Sequential()
-        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, 3, stride=1, padding=1))
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size, stride=1, padding=1))
         if batch_norm:
             self.conv.add_module("bnorm_1", nn.BatchNorm2d(out_ch))
         if dropout > 0:
@@ -249,14 +250,3 @@ class brconv(nn.Module):
         x_out = x + x_ref
         
         return x_out
-
-# Main calls
-if __name__ == '__main__':
-
-    from torchvision import models
-
-    gconv = globalconv(1,21)
-    bgconv = btneck_gconv(1,21)
-    brc = brconv(1,21)
-
-    self.conv1 = gconv
