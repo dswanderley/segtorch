@@ -100,23 +100,23 @@ class GCN(nn.Module):
         sc_x4 = self.br4(sc_x4)
 
         # upstream
-        uc_x1   = self.conv_up1(sc_x4)
+        uc_x1   = self.deconv1(sc_x4)
         uc_x1_s = sc_x3 + uc_x1
         uc_x1_r = self.br5(uc_x1_s)
         #
-        uc_x2   = self.conv_up2(uc_x1_r)
+        uc_x2   = self.deconv2(uc_x1_r)
         uc_x2_s = sc_x2 + uc_x2
         uc_x2_r = self.br6(uc_x2_s)
         #
-        uc_x3   = self.conv_up3(uc_x2_r)
+        uc_x3   = self.deconv3(uc_x2_r)
         uc_x3_s = sc_x1 + uc_x3
         uc_x3_r = self.br7(uc_x3_s)
         #
-        uc_x4   = self.conv_up4(uc_x3_r)
-        uc_x4_r = self.conv_up4(uc_x4)
+        uc_x4   = self.deconv4(uc_x3_r)
+        uc_x4_r = self.br8(uc_x4)
         #
-        uc_x5   = self.conv_up5(uc_x4_r)
-        uc_x5_r = self.conv_up5(uc_x5)
+        uc_x5   = self.deconv5(uc_x4_r)
+        uc_x5_r = self.br9(uc_x5)
 
         # output
         x_out = self.softmax(uc_x5_r)             
