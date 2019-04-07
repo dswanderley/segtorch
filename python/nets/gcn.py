@@ -70,14 +70,14 @@ class GCN(nn.Module):
         # Softmax
         self.softmax = nn.Softmax2d()
 
-        
+
     def forward(self, x):
         ''' Foward method '''
 
         # input (adapt to resnet input 3ch)
         c_x0 = self.inconv(x)
 
-        # Resnet 
+        # Resnet
         dc_x0 = self.conv0(c_x0)    # 512x512 -> 256x256
         dc_x0 = self.bn0(dc_x0)
         dc_x0 = self.relu0(dc_x0)
@@ -93,7 +93,7 @@ class GCN(nn.Module):
         sc_x2 = self.gcn2(dc_x2)
         sc_x3 = self.gcn3(dc_x3)
         sc_x4 = self.gcn4(dc_x4)
-        # 
+        #
         sc_x1 = self.br1(sc_x1)
         sc_x2 = self.br2(sc_x2)
         sc_x3 = self.br3(sc_x3)
@@ -119,6 +119,6 @@ class GCN(nn.Module):
         uc_x5_r = self.br9(uc_x5)
 
         # output
-        x_out = self.softmax(uc_x5_r)             
+        x_out = self.softmax(uc_x5_r)
 
         return x_out

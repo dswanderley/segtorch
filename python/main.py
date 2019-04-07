@@ -20,6 +20,7 @@ import utils.transformations as tsfrm
 
 from torch import optim
 from utils.logger import Logger
+from nets.deeplab import DeepLabv3_plus
 from nets.gcn import GCN
 from nets.unet import Unet2
 from utils.datasets import OvaryDataset, VOC2012Dataset
@@ -53,7 +54,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PyTorch U-net training and prediction.")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['unet2', 'unet', 'gcn'],
+                        choices=['deeplab_v3+', 'gcn', 'unet2', 'unet'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs (default: 1)')
@@ -128,7 +129,7 @@ if __name__ == '__main__':
         interaction = [1., 0.5]
         in_channels += 1
         network_name = 'i' + network_name
-    
+
 
     print(network_name)
     print('dataset:', dataset_name)
@@ -136,7 +137,7 @@ if __name__ == '__main__':
     print('epochs:', n_epochs)
     print('batch size:', batch_size)
     print('optmization:', opt)
-    print('loss funcion:', loss)    
+    print('loss funcion:', loss)
     print('---------------------------')
     print('')
 
@@ -147,7 +148,9 @@ if __name__ == '__main__':
     logger = Logger('../logs/' + train_name + '/')
 
     # Load Network model
-    if net_type == 'gcn':
+    if net_type == 'deeplab_v3':
+        model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
+    elif net_type == 'gcn':
         model = GCN(n_channels=in_channels, n_classes=n_classes)
     else:
         model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
@@ -175,7 +178,7 @@ if __name__ == '__main__':
         dataset_train = VOC2012Dataset(im_dir=im_dir, gt_dir=gt_dir, file_list=list_dir+'train.txt')
         dataset_val =   VOC2012Dataset(im_dir=im_dir, gt_dir=gt_dir, file_list=list_dir+'val.txt')
         dataset_test =  VOC2012Dataset(im_dir=im_dir, gt_dir=gt_dir, file_list=list_dir+'val.txt')
-        
+
     # Training Parameters
     if opt == 'adam':
         optmizer = optim.Adam(model.parameters(), lr=0.001)
@@ -183,9 +186,9 @@ if __name__ == '__main__':
         optmizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.99, weight_decay=0.0005)
     # Loss function
     if loss == 'dsc' or loss == 'dice':
-        loss_function = DiceLoss() 
+        loss_function = DiceLoss()
     elif loss == 'discriminative' or loss == 'dlf':
-        loss_function = DiscriminativeLoss(n_features=2) 
+        loss_function = DiscriminativeLoss(n_features=2)
     else:
         loss_function = nn.CrossEntropyLoss()
 
