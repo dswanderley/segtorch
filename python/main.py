@@ -24,7 +24,7 @@ from nets.deeplab import DeepLabv3_plus
 from nets.gcn import GCN
 from nets.unet import Unet2
 from utils.datasets import OvaryDataset, VOC2012Dataset
-from utils.losses import DiceLoss, DiscriminativeLoss
+from utils.losses import *
 from train import Training
 from predict import Inference
 
@@ -54,12 +54,12 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PyTorch U-net training and prediction.")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['deeplab_v3+', 'gcn', 'unet2', 'unet'],
+                        choices=['deeplab_v3+', 'gcn', 'unet', 'unet2'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs (default: 1)')
-    parser.add_argument('--batch_size', type=int, default=3,
-                        help='batch size (default: 3)')
+    parser.add_argument('--batch_size', type=int, default=4,
+                        help='batch size (default: 4)')
     parser.add_argument('--dataset', type=str, default='ovarian',
                         choices=['ovarian', 'voc2012'],
                         help='select dataset, it also defines the input depth and the output classes (default: ovarian)')
@@ -67,10 +67,10 @@ if __name__ == '__main__':
                         choices=['none', 'ovary', 'follicle', 'both'],
                         help='select dataset (default: ovarian)')
     parser.add_argument('--opt', type=str, default='adam',
-                        choices=['adam', 'sgd'],
+                        choices=['adam', 'adamax', 'sgd'],
                         help='optmization process (default: adam)')
     parser.add_argument('--loss', type=str, default='dsc',
-                        choices=['dice', 'discriminative', 'crossentropy'],
+                        choices=['dice', 'wdice', 'discriminative', 'crossentropy'],
                         help='loss function (default: dice)')
     parser.add_argument('--clahe', type=bool, default=False,
                         help='whether to use adaptive histogram equalization (default: False)')
@@ -164,6 +164,7 @@ if __name__ == '__main__':
                            tsfrm.RandomVerticalFlip(p=0.5),
                            tsfrm.RandomAffine(90, translate=(0.15, 0.15), scale=(0.75, 1.5), resample=3, fillcolor=0)
                            ])
+
     # Dataset definitions
     if dataset_name == 'ovarian':
         im_dir = '../datasets/ovarian/im/'
@@ -182,11 +183,16 @@ if __name__ == '__main__':
     # Training Parameters
     if opt == 'adam':
         optmizer = optim.Adam(model.parameters(), lr=0.001)
+    if opt == 'adamax':
+        optmizer = optim.Adam(model.parameters(), lr=0.002)
     else:
         optmizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.99, weight_decay=0.0005)
+
     # Loss function
     if loss == 'dsc' or loss == 'dice':
         loss_function = DiceLoss()
+    elif loss == 'wdice' or loss == 'weighted_dice':
+        loss_function = WeightedDiceLoss()
     elif loss == 'discriminative' or loss == 'dlf':
         loss_function = DiscriminativeLoss(n_features=2)
     else:

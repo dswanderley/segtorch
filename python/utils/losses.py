@@ -77,6 +77,42 @@ class DiceCoefficients(nn.Module):
         return dsc
 
 
+class WeightedDiceLoss(nn.Module):
+    '''
+    Weighted Dice Loss
+
+    Arguments:
+        @param prediction: tensor with predictions classes
+        @param groundtruth: tensor with ground truth mask
+    '''
+
+    def __init__(self, w=[.2,.4,.4]):
+        super(WeightedDiceLoss, self).__init__()
+        self.weights = w
+
+
+    def forward (self, pred, gt):
+
+        SMOOTH = 0.0001
+
+        dsc = 0
+
+        for i in range(len(self.weights)):
+
+            prediction = pred[:,i,...].contiguous()
+            groundtruth = gt[:,i,...].contiguous()
+
+            iflat = prediction.view(-1)
+            tflat = groundtruth.view(-1)
+
+            intersection = (iflat * tflat).sum()
+            union = iflat.sum() + tflat.sum()
+            dsc += self.weights[i] * ((2. * intersection + SMOOTH) / (union + SMOOTH))
+
+        loss_dsc = 1. - dsc
+        return loss_dsc
+
+
 class DiscriminativeLoss(nn.Module):
     """
         Discriminative Loss function
