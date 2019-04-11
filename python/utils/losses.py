@@ -27,25 +27,33 @@ class DiceLoss(nn.Module):
         @param groundtruth: tensor with ground truth mask
     '''
 
-    def __init__(self):
+    def __init__(self, background=False):
         super(DiceLoss, self).__init__()
+
+        self.SMOOTH = 0.0001
+        self.background = background
 
     def forward (self, pred, gt):
 
-        SMOOTH = 0.0001
+        nclasses = gt.size()[1]
 
-        # Ignorne background
-        prediction = pred[:,1:,...].contiguous()
-        groundtruth = gt[:,1:,...].contiguous()
+        if (self.background):
+            prediction = pred.contiguous()
+            groundtruth = gt.contiguous()
+        else:
+            prediction = pred[:,1:,...].contiguous()
+            groundtruth = gt[:,1:,...].contiguous()
 
         iflat = prediction.view(-1)
         tflat = groundtruth.view(-1)
 
         intersection = (iflat * tflat).sum()
         union = iflat.sum() + tflat.sum()
-        dsc = ((2. * intersection + SMOOTH) / (union + SMOOTH))
+        
+        dsc = ((2. * intersection + self.SMOOTH) / (union + self.SMOOTH))
 
         loss_dsc = 1. - dsc
+
         return loss_dsc
 
 
