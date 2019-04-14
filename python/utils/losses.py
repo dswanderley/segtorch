@@ -49,7 +49,7 @@ class DiceLoss(nn.Module):
 
         intersection = (iflat * tflat).sum()
         union = iflat.sum() + tflat.sum()
-        
+
         dsc = ((2. * intersection + self.SMOOTH) / (union + self.SMOOTH))
 
         loss_dsc = 1. - dsc
@@ -140,22 +140,22 @@ class DiscriminativeLoss(nn.Module):
             Plot a scatter chart (print as png)
         '''
         COLOR = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
-        
+
         nf, pos, c = data.shape
 
         mean_np = mean
         mean_np = mean_np.detach().numpy()
-        
+
         data_np = data
         data_np = data_np.detach().numpy()
-        
+
         area_ext = (math.pi * self.delta_d)**2
         area_int = (math.pi * self.delta_v)**2
 
         for i in range(1,c):
             plt.scatter(data_np[0,:,i], data_np[1,:,i], c=COLOR[i], marker='.')
             plt.scatter(mean_np[0,i], mean_np[1,i], c=COLOR[i], marker='X')
-            
+
             plt.scatter(mean_np[0,i], mean_np[1,i], c='#555555', s=area_ext, alpha=0.1)
             plt.scatter(mean_np[0,i], mean_np[1,i], c='#000000', s=area_int, alpha=0.1)
 
@@ -178,9 +178,9 @@ class DiscriminativeLoss(nn.Module):
             imasks[...,i] = torch.where(gt == unique_labels[i], torch.ones(gt.shape), torch.zeros(gt.shape))
         # Reshape and expand (repeat) to the number of features
         imasks.unsqueeze_(0) # 1, n_loc, n_instances
-        
+
         return pred_repeated, imasks, n_instances
-    
+
 
     def _variance_term(self, mu, x, gt):
         ''' l_var  - intra-cluster distance '''
@@ -188,10 +188,10 @@ class DiscriminativeLoss(nn.Module):
         # Count pixels of each instance
         counts = torch.sum(gt, dim=1)
         _, C = counts.shape # number of clusterss
-        
+
         # Mean of the instance at each expected position for that instance
         mu_expand = mu.unsqueeze_(1).expand(x.shape) * gt
-        
+
         # Calculate intra distance
         diff = torch.norm(mu_expand - x, dim=0)
         distance = torch.clamp(diff - self.delta_v, 0., 100000.)**2
@@ -212,9 +212,9 @@ class DiscriminativeLoss(nn.Module):
         means = mu.reshape(nf,C).permute(1, 0)
         means_1 = means.unsqueeze(1).expand(C, C, nf)
         means_2 = means_1.permute(1, 0, 2)
-        
+
         # Calculate norm of distance
-        diff = means_1 - means_2 
+        diff = means_1 - means_2
         norm = torch.norm(diff, dim=2)
         margin = Variable(2 * self.delta_d * (1.0 - torch.eye(C))) # cluster radius
 
@@ -280,11 +280,11 @@ class DiscriminativeLoss(nn.Module):
 
             pred = prediction[i,...].contiguous()
             tgt = target[i,...].contiguous()
-            
+
             loss, l_var, l_dist, l_reg = self._discriminative_loss(pred, tgt, plot)
-            
+
             loss_list.append(loss / batch_size)
-            
+
         out_loss = torch.sum(torch.stack(loss_list))
 
         return  out_loss

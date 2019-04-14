@@ -127,7 +127,7 @@ class outconv(nn.Module):
         if dropout > 0:
             self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
         self.conv.add_module("relu_1",nn.ReLU(inplace=True))
-              
+
 
     def forward(self, x):
         ''' Foward method '''
@@ -137,7 +137,7 @@ class outconv(nn.Module):
 
 class globalconv(nn.Module):
     '''
-        Global Convolutional module 
+        Global Convolutional module
     '''
     def __init__(self, in_ch, m_ch, out_ch=None, k=7, batch_norm=False, reg=False, dropout=0):
         ''' Constructor '''
@@ -206,7 +206,7 @@ class globalconv(nn.Module):
 
 class btneck_gconv(nn.Module):
     '''
-        Global Convolutional bottleneck module 
+        Global Convolutional bottleneck module
     '''
     def __init__(self, in_ch, m_ch, k=7, batch_norm=True, reg=True, dropout=0):
         ''' Constructor '''
@@ -229,7 +229,7 @@ class btneck_gconv(nn.Module):
 
 class brconv(nn.Module):
     '''
-        Boundary Refine Convolutional module 
+        Boundary Refine Convolutional module
     '''
     def __init__(self, out_ch, bnorm=False):
         ''' Constructor '''
@@ -245,11 +245,11 @@ class brconv(nn.Module):
         self.conv_ref.add_module("conv_2", nn.Conv2d(out_ch,out_ch, kernel_size=3, padding=1))
         if bnorm:
             self.conv_ref.add_module("bnorm_2", nn.BatchNorm2d(out_ch))
-        
+
     def forward(self, x):
         ''' Foward method '''
         x_ref = self.conv_ref(x)
         # Sum
         x_out = x + x_ref
-        
+
         return x_out
