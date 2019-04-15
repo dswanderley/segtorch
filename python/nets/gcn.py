@@ -122,3 +122,109 @@ class GCN(nn.Module):
         x_out = self.softmax(uc_x5_r)
 
         return x_out
+
+
+
+class UGCN(nn.Module):
+    '''
+    U-net with Global convolutions class from end-to-end ovarian structures segmentation
+    '''
+    def __init__(self, n_channels, n_classes, bilinear=False):
+        ''' Constructor '''
+        super(UGCN, self).__init__()
+
+        # Number of classes definition
+        self.n_classes = n_classes
+
+        # Set input layer
+        self.conv_init  = inconv(n_channels, 8)
+
+        # Set downconvolution layer 1
+        self.conv_down1 = downconv(8, 8, dropout=0.2) # 512 -> 256
+        # Set downconvolution layer 2
+        self.conv_down2 = downconv(8, 16, dropout=0.2) # 256 - > 128
+        # Set downconvolution layer 3
+        self.conv_down3 = downconv(16, 24, dropout=0.2) # 128 -> 64
+        # Set downconvolution layer 4
+        self.conv_down4 = downconv(24, 32, dropout=0.2) # 64 -> 32
+        # Set downconvolution layer 5
+        self.conv_down5 = downconv(32, 40, dropout=0.2) # 32 -> 16
+        # Set downconvolution layer 6
+        self.conv_down6 = downconv(40, 48, dropout=0.2) # 16 -> 8
+
+        # GCN Layers
+        self.gcn0 = globalconv(8, 8, k=221, batch_norm=True, reg=True, dropout=0) # 512
+        self.gcn1 = globalconv(8, 8, k=111, batch_norm=True, reg=True, dropout=0) # 256
+        self.gcn2 = globalconv(16, 16, k=55, batch_norm=True, reg=True, dropout=0) # 128
+        self.gcn3 = globalconv(24, 24, k=27, batch_norm=True, reg=True, dropout=0) # 64
+        self.gcn4 = globalconv(32, 32, k=13, batch_norm=True, reg=True, dropout=0) # 32
+        self.gcn5 = globalconv(40, 40, k=7, batch_norm=True, reg=True, dropout=0) # 16
+
+        # Set upconvolution layer 1
+        self.conv_up1 = upconv(48, 320, res_ch=40, dropout=0.2, bilinear=bilinear)
+        # Set upconvolution layer 2
+        self.conv_up2 = upconv(320, 256, res_ch=32, dropout=0.2, bilinear=bilinear)
+        # Set upconvolution layer 3
+        self.conv_up3 = upconv(256, 192, res_ch=24, dropout=0.2, bilinear=bilinear)
+        # Set upconvolution layer 4
+        self.conv_up4 = upconv(192, 128, res_ch=16, dropout=0.2, bilinear=bilinear)
+        # Set upconvolution layer 5
+        self.conv_up5 = upconv(128, 64, res_ch=8, dropout=0.2, bilinear=bilinear)
+        # Set upconvolution layer 6
+        self.conv_up6 = upconv(64, 8, res_ch=8, dropout=0.2, bilinear=bilinear)
+
+        # Set output layer
+        if type(n_classes) is list:
+            self.conv_out = nn.ModuleList() # necessary for GPU convertion
+            for n in n_classes:
+                c_out = outconv(8, n)
+                self.conv_out.append(c_out)
+        else:
+            self.conv_out = outconv(8, n_classes)
+        # Define Softmax
+        self.softmax = nn.Softmax2d()
+
+    def forward(self, x):
+        ''' Foward method '''
+
+        # input
+        c_x0 = self.conv_init(x)
+        # downstream
+        dc_x1 = self.conv_down1(c_x0)
+        dc_x2 = self.conv_down2(dc_x1)
+        dc_x3 = self.conv_down3(dc_x2)
+        dc_x4 = self.conv_down4(dc_x3)
+        dc_x5 = self.conv_down5(dc_x4)
+        dc_x6 = self.conv_down6(dc_x5)
+        # Skip connections with GConv
+        gc_x0 = self.gcn0(c_x0)
+        gc_x1 = self.gcn1(dc_x1)
+        gc_x2 = self.gcn2(dc_x2)
+        gc_x3 = self.gcn3(dc_x3)
+        gc_x4 = self.gcn4(dc_x4)
+        gc_x5 = self.gcn5(dc_x5)
+        # upstream
+        uc_x1 = self.conv_up1(dc_x6, gc_x5)
+        uc_x2 = self.conv_up2(uc_x1, gc_x4)
+        uc_x3 = self.conv_up3(uc_x2, gc_x3)
+        uc_x4 = self.conv_up4(uc_x3, gc_x2)
+        uc_x5 = self.conv_up5(uc_x4, gc_x1)
+        uc_x6 = self.conv_up6(uc_x5, gc_x0)
+        # output
+        if type(self.n_classes) is list:
+            x_out = []
+            for c_out in self.conv_out:
+                x = c_out(uc_x6)
+                x_out.append(self.softmax(x))
+        else:
+            x = self.conv_out(uc_x6)
+            x_out = self.softmax(x)
+
+        return x_out
+
+
+# Main calls
+if __name__ == '__main__':
+
+    net = UGCN(1, 3)
+    print(net)

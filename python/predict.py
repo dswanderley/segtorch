@@ -56,7 +56,7 @@ class Inference():
         # Save table
         with open(filename,'w') as fp:
             a = csv.writer(fp, delimiter=';')
-            a.writerows(table)   
+            a.writerows(table)
 
 
     def predict(self, images, save=True):
@@ -101,7 +101,7 @@ class Inference():
             # Display evaluation
             iname = im_name[0]
             dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item()])
-            
+
             print(iname)
             print('Stroma DSC:    {:f}'.format(dsc[1]))
             print('Follicle DSC:  {:f}'.format(dsc[2]))
