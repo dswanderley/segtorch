@@ -277,7 +277,7 @@ class brconv(nn.Module):
         x_ref = self.conv_ref(x)
         # Sum
         x_out = x + x_ref
-        if self.conv_sum:
+        if self.convout:
             x_out = self.conv_sum(x_out)
 
         return x_out
