@@ -21,8 +21,8 @@ import utils.transformations as tsfrm
 from torch import optim
 from utils.logger import Logger
 from nets.deeplab import DeepLabv3_plus
-from nets.gcn import GCN
-from nets.unet import Unet2
+from nets.gcn import *
+from nets.unet import *
 from utils.datasets import OvaryDataset, VOC2012Dataset
 from utils.losses import *
 from train import Training
@@ -52,9 +52,9 @@ def gettrainname(name):
 # Main calls
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description="PyTorch U-net training and prediction.")
+    parser = argparse.ArgumentParser(description="PyTorch segmentation network training and prediction.")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['deeplab_v3+', 'gcn', 'unet', 'unet2'],
+                        choices=['deeplab_v3+', 'gcn', 'ugcn', 'unet', 'unet2'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs (default: 1)')
@@ -130,7 +130,6 @@ if __name__ == '__main__':
         in_channels += 1
         network_name = 'i' + network_name
 
-
     print(network_name)
     print('dataset:', dataset_name)
     print('output classes:', n_classes)
@@ -144,14 +143,13 @@ if __name__ == '__main__':
     # Define training name
     train_name = gettrainname(network_name)
 
-    # Set logs folder
-    logger = Logger('../logs/' + train_name + '/')
-
     # Load Network model
     if net_type == 'deeplab_v3':
         model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
     elif net_type == 'gcn':
         model = GCN(n_channels=in_channels, n_classes=n_classes)
+    elif net_type == 'ugcn':
+        model = UGCN(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     else:
         model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     #print(net)
@@ -197,6 +195,9 @@ if __name__ == '__main__':
         loss_function = DiscriminativeLoss(n_features=2)
     else:
         loss_function = nn.CrossEntropyLoss()
+
+    # Set logs folder
+    logger = Logger('../logs/' + train_name + '/')
 
     # Run training
     training = Training(model, device, dataset_train, dataset_val,
