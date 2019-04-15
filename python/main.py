@@ -22,6 +22,7 @@ from torch import optim
 from utils.logger import Logger
 from nets.deeplab import DeepLabv3_plus
 from nets.gcn import *
+from nets.gcn2 import *
 from nets.unet import *
 from utils.datasets import OvaryDataset, VOC2012Dataset
 from utils.losses import *
@@ -147,7 +148,8 @@ if __name__ == '__main__':
     if net_type == 'deeplab_v3':
         model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
     elif net_type == 'gcn':
-        model = GCN(n_channels=in_channels, n_classes=n_classes)
+        #model = GCN(n_channels=in_channels, n_classes=n_classes)
+        model = FCN_GCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'bgcn' or net_type == 'balancedgcn':
         model = BalancedGCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'ugcn':
