@@ -232,16 +232,20 @@ class OvaryDataset(Dataset):
         # Ovarian auxiliary mask output
         if encods[2]:
             # Multi mask - background (R = 1) / follicle (G = 1)
-            mask_fback = np.zeros((gt_np.shape[0], gt_np.shape[1]))
-            mask_fback[gt_np < t2] = 255.
-            # final mask
+            # follicle mask
             fol_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 2))
-            fol_mask[...,0] = 1. - mask_edges
-            fol_mask[...,1] = mask_edges
+            fol_mask[...,1] = mask_follicle / 255.
+            fol_mask[...,0] = 1. - fol_mask[...,1]             
             fol_mask = (fol_mask).astype(np.float32)
+            # final edge
+            fol_edge = np.zeros((gt_np.shape[0], gt_np.shape[1], 2))
+            fol_edge[...,0] = 1. - mask_edges
+            fol_edge[...,1] = mask_edges
+            fol_edge = (fol_edge).astype(np.float32)
         else:
             # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
-            fol_mask = (mask_edges).astype(np.float32)
+            fol_mask = (mask_follicle / 255.).astype(np.float32)
+            fol_edge = (mask_edges).astype(np.float32)
 
         '''
             Instance Follicles mask
@@ -280,9 +284,9 @@ class OvaryDataset(Dataset):
         # Print data if necessary
         #Image.fromarray((255*im_np).astype(np.uint8)).save("im_np.png")
         #Image.fromarray((255*gt_mask).astype(np.uint8)).save("gt_all.png")
-        #Image.fromarray((255*ov_mask[...,1]).astype(np.uint8)).save("gt_ov.png")
-        #Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
-
+        Image.fromarray((255*fol_edge[...,1]).astype(np.uint8)).save("gt_edg.png")
+        Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
+        
         # Convert to torch (to be used on DataLoader)
 
         torch_im = torch.from_numpy(im_np)
@@ -297,9 +301,13 @@ class OvaryDataset(Dataset):
         if len(torch_ov.shape) > 2:
             torch_ov = torch_ov.permute(2, 0, 1).contiguous()
 
-        torch_fl = torch.from_numpy(fol_mask)
-        if len(torch_fl.shape) > 2:
-            torch_fl = torch_fl.permute(2, 0, 1).contiguous()
+        torch_fol = torch.from_numpy(fol_mask)
+        if len(torch_fol.shape) > 2:
+            torch_fol = torch_fol.permute(2, 0, 1).contiguous()
+
+        torch_edge = torch.from_numpy(fol_edge)
+        if len(torch_edge.shape) > 2:
+            torch_edge = torch_edge.permute(2, 0, 1).contiguous()
 
         torch_is = torch.from_numpy(inst_mask)
         if len(torch_is.shape) > 2:
@@ -309,7 +317,8 @@ class OvaryDataset(Dataset):
                     'image': torch_im,
                     'gt_mask': torch_gt,
                     'ovary_mask': torch_ov,
-                    'follicle_mask': torch_fl,
+                    'follicle_mask': torch_fol,
+                    'follicle_edge': torch_edge,
                     'follicle_instances': torch_is,
                     'num_follicles':  num_inst }
 

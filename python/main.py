@@ -106,11 +106,11 @@ if __name__ == '__main__':
             network_name += '_ovar'
         elif multitask == 'follicle':
             n_classes = [3,2]
-            target = ['gt_mask', 'follicle_mask']
+            target = ['gt_mask', 'follicle_edge']
             network_name += '_foll'
         elif multitask == 'both':
             n_classes = [3,2,2]
-            target = ['gt_mask', 'ovary_mask', 'follicle_mask']
+            target = ['gt_mask', 'ovary_mask', 'follicle_edge']
             network_name += '_both'
         else:
             n_classes = 3
