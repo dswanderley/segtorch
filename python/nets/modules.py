@@ -139,13 +139,14 @@ class globalconv(nn.Module):
     '''
         Global Convolutional module
     '''
-    def __init__(self, in_ch, m_ch, out_ch=None, k=7, batch_norm=False, reg=False, dropout=0):
+    def __init__(self, in_ch, m_ch, out_ch=None, k=7, batch_norm=False, reg=False, dropout=0, convout=False):
         ''' Constructor '''
         super(globalconv, self).__init__()
 
         self.reg = reg
         self.batch_norm = batch_norm
         self.dropout = dropout
+        self.convout = convout
         pad = int((k-1)/2)
         if out_ch == None:
             out_ch = m_ch
@@ -187,19 +188,23 @@ class globalconv(nn.Module):
             self.conv_right.add_module("relu_r_2",nn.ReLU(inplace=True))
 
         # Conv sum
-        self.conv_sum = nn.Sequential()
-        self.conv_sum.add_module("conv_sum", nn.Conv2d(m_ch, out_ch, kernel_size=1, stride=1, padding=0))
-        if batch_norm:
-            self.conv_sum.add_module("bnorm_sum",nn.BatchNorm2d(out_ch))
-
+        if self.convout:
+            self.conv_sum = nn.Sequential()
+            self.conv_sum.add_module("conv_sum", nn.Conv2d(m_ch, out_ch, kernel_size=1, stride=1, padding=0))
+            if batch_norm:
+                self.conv_sum.add_module("bnorm_sum", nn.BatchNorm2d(out_ch))
+            if reg:
+                self.conv_sum.add_module("relu_sum", nn.ReLU(inplace=True))
 
     def forward(self, x):
         ''' Foward method '''
         x_l = self.conv_left(x)
         x_r = self.conv_right(x)
         # Sum
-        x_gcb = x_l + x_r
-        x_out = self.conv_sum(x_gcb)
+        x_out = x_l + x_r
+        # Output
+        if self.convout:
+            x_out = self.conv_sum(x_out)
 
         return x_out
 
@@ -215,15 +220,17 @@ class btneck_gconv(nn.Module):
         self.batch_norm = batch_norm
         self.dropout = dropout
         # Left side
-        self.gconv = globalconv(in_ch, m_ch, out_ch=in_ch, k=k, batch_norm=batch_norm, reg=reg, dropout=dropout)
-        #self.relu = nn.ReLU(inplace=True)
+        self.gconv = globalconv(in_ch, m_ch, out_ch=in_ch, k=k, batch_norm=batch_norm, reg=reg, dropout=dropout, outconv=True)
+        if self.reg:
+            self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
         ''' Foward method '''
         x_gcb = self.gconv(x)
         # Sum
         x_out = x + x_gcb
-
+        if self.reg:
+            x_out = self.relu(x_out)
         return x_out
 
 
@@ -231,25 +238,54 @@ class brconv(nn.Module):
     '''
         Boundary Refine Convolutional module
     '''
-    def __init__(self, out_ch, bnorm=False):
+    def __init__(self, out_ch, bnorm=False, reg=False, convout=False):
         ''' Constructor '''
         super(brconv, self).__init__()
+        # Properties
+        self.convout = convout
+        self.reg = reg
+        self.batch_norm = bnorm
+
         # Refined side
         self.conv_ref = nn.Sequential()
+
         # Conv 1 - 3x3 + Relu
         self.conv_ref.add_module("conv_1",  nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1))
         if bnorm:
             self.conv_ref.add_module("bnorm_1", nn.BatchNorm2d(out_ch))
         self.conv_ref.add_module("relu", nn.ReLU(inplace=True))
+
         # Conv 2 - 3x3
         self.conv_ref.add_module("conv_2", nn.Conv2d(out_ch,out_ch, kernel_size=3, padding=1))
         if bnorm:
             self.conv_ref.add_module("bnorm_2", nn.BatchNorm2d(out_ch))
+        if reg:
+            self.conv_ref.add_module("relu", nn.ReLU(inplace=True))
+
+        # Conv sum, if needs for output (1x1)
+        if self.convout:
+            self.conv_sum = nn.Sequential()
+            self.conv_sum.add_module("conv_sum", nn.Conv2d(out_ch, out_ch, kernel_size=1, stride=1, padding=0))
+            if bnorm:
+                self.conv_sum.add_module("bnorm_sum", nn.BatchNorm2d(out_ch))
+            if reg:
+                self.conv_sum.add_module("relu_sum", nn.ReLU(inplace=True))
 
     def forward(self, x):
         ''' Foward method '''
+        # Apply conv
         x_ref = self.conv_ref(x)
         # Sum
         x_out = x + x_ref
+        if self.conv_sum:
+            x_out = self.conv_sum(x_out)
 
         return x_out
+
+
+
+# Main calls
+if __name__ == '__main__':
+
+    block = globalconv(10,10)
+    print(block)

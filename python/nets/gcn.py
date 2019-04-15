@@ -124,6 +124,117 @@ class GCN(nn.Module):
         return x_out
 
 
+class BalancedGCN(nn.Module):
+    '''
+        Balanced Fully Global Convolution Network with simetric features reducing to number of classes.
+    '''
+    def __init__(self, n_channels, n_classes, bnorm=True, reg=True, convout=True):
+        ''' Constructor '''
+        super(BalancedGCN, self).__init__()
+        # Number of classes definition
+        self.n_classes = n_classes
+        self.bnorm = bnorm
+        self.reg = reg
+        self.convout = convout
+
+        # Input conv is applied to convert the input to 3 ch depth
+        self.inconv = fwdconv(n_channels, 3, kernel_size=1, padding=0)
+
+        # Load Resnet
+        resnet = models.resnet50(pretrained=True)
+
+        # Set input layer
+        self.conv0 = resnet.conv1 # Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        self.bn0 = resnet.bn1 # BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.relu0 = resnet.relu
+        self.maxpool = resnet.maxpool # MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+
+        # Resnet layers
+        self.resnet1 = resnet.layer1 # res-2 -> (depth) in:   64, out:  256
+        self.resnet2 = resnet.layer2 # res-3 -> (depth) in:  256, out:  512
+        self.resnet3 = resnet.layer3 # res-4 -> (depth) in:  512, out: 1024
+        self.resnet4 = resnet.layer4 # res-5 -> (depth) in: 1024, out: 2048
+
+        # GCN Layers
+        self.gcn1 = globalconv(256,  64, k=55, batch_norm=bnorm, reg=reg, convout=convout)
+        self.gcn2 = globalconv(512,  256, k=27, batch_norm=bnorm, reg=reg, convout=convout)
+        self.gcn3 = globalconv(1024, 512, k=13, batch_norm=bnorm, reg=reg, convout=convout)
+        self.gcn4 = globalconv(2048, 1024, k=7, batch_norm=bnorm, reg=reg, convout=convout)
+
+        # Boundary Refine layers
+        self.br1 = brconv(64, bnorm=bnorm, reg=reg, convout=convout)
+        self.br2 = brconv(256, bnorm=bnorm, reg=reg, convout=convout)
+        self.br3 = brconv(512, bnorm=bnorm, reg=reg, convout=convout)
+        self.br4 = brconv(1024, bnorm=bnorm, reg=reg, convout=convout)
+        self.br5 = brconv(1024, bnorm=bnorm, reg=reg, convout=convout)
+        self.br6 = brconv(512, bnorm=bnorm, reg=reg, convout=convout)
+        self.br7 = brconv(256, bnorm=bnorm, reg=reg, convout=convout)
+        self.br8 = brconv(64, bnorm=bnorm, reg=reg, convout=convout)
+        self.br9 = brconv(3, bnorm=bnorm, reg=reg, convout=convout)
+
+        # Deconv
+        self.deconv1 = upconv(2048, 1024) # Spatial size 16 x 16 -> 32 x 32
+        self.deconv2 = upconv(1024, 512) # Spatial size 32 x 32 -> 64 x 64
+        self.deconv3 = upconv(512, 256) # Spatial size 64 x 64 -> 128x128
+        self.deconv4 = upconv(256, 64) # Spatial size 128x128 -> 256x256
+        self.deconv5 = upconv(64, 3) # Spatial size 256x256 -> 512x512
+
+        # Softmax
+        self.softmax = nn.Softmax2d()
+
+
+    def forward(self, x):
+        ''' Foward method '''
+
+        # input (adapt to resnet input 3ch)
+        c_x0 = self.inconv(x)
+
+        # Resnet
+        dc_x0 = self.conv0(c_x0)    # 512x512 -> 256x256
+        dc_x0 = self.bn0(dc_x0)
+        dc_x0 = self.relu0(dc_x0)
+        # downstream
+        dc_x1 = self.maxpool(dc_x0)
+        dc_x1 = self.resnet1(dc_x1)     # 256x256 -> 128x128
+        dc_x2 = self.resnet2(dc_x1)     # 128x128 -> 64 x 64
+        dc_x3 = self.resnet3(dc_x2)     # 64 x 64 -> 32 x 32
+        dc_x4 = self.resnet4(dc_x3)     # 32 x 32 -> 16 x16
+
+        # skip conections with global convs
+        sc_x1 = self.gcn1(dc_x1)
+        sc_x2 = self.gcn2(dc_x2)
+        sc_x3 = self.gcn3(dc_x3)
+        sc_x4 = self.gcn4(dc_x4)
+        #
+        sc_x1 = self.br1(sc_x1)
+        sc_x2 = self.br2(sc_x2)
+        sc_x3 = self.br3(sc_x3)
+        sc_x4 = self.br4(sc_x4)
+
+        # upstream
+        uc_x1   = self.deconv1(sc_x4)
+        uc_x1_s = sc_x3 + uc_x1
+        uc_x1_r = self.br5(uc_x1_s)
+        #
+        uc_x2   = self.deconv2(uc_x1_r)
+        uc_x2_s = sc_x2 + uc_x2
+        uc_x2_r = self.br6(uc_x2_s)
+        #
+        uc_x3   = self.deconv3(uc_x2_r)
+        uc_x3_s = sc_x1 + uc_x3
+        uc_x3_r = self.br7(uc_x3_s)
+        #
+        uc_x4   = self.deconv4(uc_x3_r)
+        uc_x4_r = self.br8(uc_x4)
+        #
+        uc_x5   = self.deconv5(uc_x4_r)
+        uc_x5_r = self.br9(uc_x5)
+
+        # output
+        x_out = self.softmax(uc_x5_r)
+
+        return x_out
+
 
 class UGCN(nn.Module):
     '''
@@ -153,12 +264,12 @@ class UGCN(nn.Module):
         self.conv_down6 = downconv(40, 48, dropout=0.2) # 16 -> 8
 
         # GCN Layers
-        self.gcn0 = globalconv(8, 8, k=221, batch_norm=True, reg=True, dropout=0) # 512
-        self.gcn1 = globalconv(8, 8, k=111, batch_norm=True, reg=True, dropout=0) # 256
-        self.gcn2 = globalconv(16, 16, k=55, batch_norm=True, reg=True, dropout=0) # 128
-        self.gcn3 = globalconv(24, 24, k=27, batch_norm=True, reg=True, dropout=0) # 64
-        self.gcn4 = globalconv(32, 32, k=13, batch_norm=True, reg=True, dropout=0) # 32
-        self.gcn5 = globalconv(40, 40, k=7, batch_norm=True, reg=True, dropout=0) # 16
+        self.gcn0 = globalconv(8, 8, k=221, batch_norm=True, reg=True, convout=True) # 512
+        self.gcn1 = globalconv(8, 8, k=111, batch_norm=True, reg=True, convout=True) # 256
+        self.gcn2 = globalconv(16, 16, k=55, batch_norm=True, reg=True, convout=True) # 128
+        self.gcn3 = globalconv(24, 24, k=27, batch_norm=True, reg=True, convout=True) # 64
+        self.gcn4 = globalconv(32, 32, k=13, batch_norm=True, reg=True, convout=True) # 32
+        self.gcn5 = globalconv(40, 40, k=7, batch_norm=True, reg=True, convout=True) # 16
 
         # Set upconvolution layer 1
         self.conv_up1 = upconv(48, 320, res_ch=40, dropout=0.2, bilinear=bilinear)
@@ -226,5 +337,7 @@ class UGCN(nn.Module):
 # Main calls
 if __name__ == '__main__':
 
-    net = UGCN(1, 3)
-    print(net)
+    net1 = GCN(1, 3)
+    net2 = BalancedGCN(1, 3)
+    net3 = UGCN(1, 3)
+    print(net1)
