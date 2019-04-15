@@ -166,18 +166,18 @@ class BalancedGCN(nn.Module):
         self.br2 = brconv(256, bnorm=bnorm, reg=reg, convout=convout)
         self.br3 = brconv(512, bnorm=bnorm, reg=reg, convout=convout)
         self.br4 = brconv(1024, bnorm=bnorm, reg=reg, convout=convout)
-        self.br5 = brconv(1024, bnorm=bnorm, reg=reg, convout=convout)
-        self.br6 = brconv(512, bnorm=bnorm, reg=reg, convout=convout)
-        self.br7 = brconv(256, bnorm=bnorm, reg=reg, convout=convout)
-        self.br8 = brconv(64, bnorm=bnorm, reg=reg, convout=convout)
+        self.br5 = brconv(512, bnorm=bnorm, reg=reg, convout=convout)
+        self.br6 = brconv(256, bnorm=bnorm, reg=reg, convout=convout)
+        self.br7 = brconv(64, bnorm=bnorm, reg=reg, convout=convout)
+        self.br8 = brconv(16, bnorm=bnorm, reg=reg, convout=convout)
         self.br9 = brconv(3, bnorm=bnorm, reg=reg, convout=convout)
 
         # Deconv
-        self.deconv1 = upconv(2048, 1024) # Spatial size 16 x 16 -> 32 x 32
-        self.deconv2 = upconv(1024, 512) # Spatial size 32 x 32 -> 64 x 64
-        self.deconv3 = upconv(512, 256) # Spatial size 64 x 64 -> 128x128
-        self.deconv4 = upconv(256, 64) # Spatial size 128x128 -> 256x256
-        self.deconv5 = upconv(64, 3) # Spatial size 256x256 -> 512x512
+        self.deconv1 = upconv(1024, 512) # Spatial size 16 x 16 -> 32 x 32
+        self.deconv2 = upconv(512, 256) # Spatial size 32 x 32 -> 64 x 64
+        self.deconv3 = upconv(256, 64) # Spatial size 64 x 64 -> 128x128
+        self.deconv4 = upconv(64, 16) # Spatial size 128x128 -> 256x256
+        self.deconv5 = upconv(16, 3) # Spatial size 256x256 -> 512x512
 
         # Softmax
         self.softmax = nn.Softmax2d()
