@@ -284,8 +284,8 @@ class OvaryDataset(Dataset):
         # Print data if necessary
         #Image.fromarray((255*im_np).astype(np.uint8)).save("im_np.png")
         #Image.fromarray((255*gt_mask).astype(np.uint8)).save("gt_all.png")
-        Image.fromarray((255*fol_edge[...,1]).astype(np.uint8)).save("gt_edg.png")
-        Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
+        #Image.fromarray((255*fol_edge[...,1]).astype(np.uint8)).save("gt_edg.png")
+        #Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
         
         # Convert to torch (to be used on DataLoader)
 

@@ -108,7 +108,7 @@ class FCN_GCN(nn.Module):
         self.layer4 = resnet.layer4 #res-5 o/p = 7x7,2048
         
         self.gcn1 = GCN_block(256,self.num_classes,55) #gcn_i after layer-1
-        self.gnc2 = GCN_block(512,self.num_classes,27)
+        self.gcn2 = GCN_block(512,self.num_classes,27)
         self.gcn3 = GCN_block(1024,self.num_classes,13)
         self.gcn4 = GCN_block(2048,self.num_classes,7)
 
