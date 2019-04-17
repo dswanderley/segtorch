@@ -152,14 +152,14 @@ class FCN_GCN(nn.Module):
         gc_fm3 = self.br3(self.gcn3(fm3))
         gc_fm4 = self.br4(self.gcn4(fm4))
 
-        gc_fm4 = F.Upsample(gc_fm4, fm3.size()[2:], mode='bilinear', align_corners=True)
-        gc_fm3 = F.Upsample(self.br5(gc_fm3 + gc_fm4), fm2.size()[2:], mode='bilinear', align_corners=True)
-        gc_fm2 = F.Upsample(self.br6(gc_fm2 + gc_fm3), fm1.size()[2:], mode='bilinear', align_corners=True)
-        gc_fm1 = F.Upsample(self.br7(gc_fm1 + gc_fm2), pooled_x.size()[2:], mode='bilinear', align_corners=True)
+        gc_fm4 = F.interpolate(gc_fm4, fm3.size()[2:], mode='bilinear', align_corners=True)
+        gc_fm3 = F.interpolate(self.br5(gc_fm3 + gc_fm4), fm2.size()[2:], mode='bilinear', align_corners=True)
+        gc_fm2 = F.interpolate(self.br6(gc_fm2 + gc_fm3), fm1.size()[2:], mode='bilinear', align_corners=True)
+        gc_fm1 = F.interpolate(self.br7(gc_fm1 + gc_fm2), pooled_x.size()[2:], mode='bilinear', align_corners=True)
 
-        gc_fm1 = F.Upsample(self.br8(gc_fm1), scale_factor=2, mode='bilinear', align_corners=True)
+        gc_fm1 = F.interpolate(self.br8(gc_fm1), scale_factor=2, mode='bilinear', align_corners=True)
 
-        out = F.Upsample(self.br9(gc_fm1), input.size()[2:], mode='bilinear', align_corners=True)
+        out = F.interpolate(self.br9(gc_fm1), input.size()[2:], mode='bilinear', align_corners=True)
 
         return out
 
@@ -260,3 +260,4 @@ if __name__ == '__main__':
     model_bas = FCN_GCN(1,1)
 
     print(model_bas)
+
