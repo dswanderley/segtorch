@@ -172,6 +172,34 @@ class outconv(nn.Module):
         return x
 
 
+class AtrousConv(nn.Module):
+    '''
+    Atrous or dilated convolution layer
+    '''
+    def __init__(self, in_ch, out_ch, kernel_size=3, dilation=2, padding=1, batch_norm=True, dropout=0):
+        ''' Constructor '''
+        super(AtrousConv, self).__init__()
+        # parameters
+        self.kernel_size = kernel_size
+        self.batch_norm = batch_norm
+        self.dropout = dropout
+        self.dilation = dilation
+        self.padding = padding
+        # Set conv layer
+        self.conv = nn.Sequential()
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size=kernel_size, stride=1, dilation=dilation, padding=padding, bias=False))
+        if batch_norm:
+            self.conv.add_module("bnorm_1",nn.BatchNorm2d(out_ch))
+        if dropout > 0:
+            self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
+        self.conv.add_module("relu_1",nn.ReLU(inplace=True))
+
+    def forward(self, x):
+        ''' Foward method '''
+        x = self.conv(x)
+        return x
+
+
 class globalconv(nn.Module):
     '''
         Global Convolutional module

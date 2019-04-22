@@ -21,7 +21,6 @@ import utils.transformations as tsfrm
 from torch import optim
 from utils.logger import Logger
 from nets.deeplab import DeepLabv3_plus
-from nets.gcn import *
 from nets.unet import *
 from utils.datasets import OvaryDataset, VOC2012Dataset
 from utils.losses import *
@@ -54,7 +53,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PyTorch segmentation network training and prediction.")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['deeplab_v3+', 'gcn', 'bgcn', 'ugcn', 'unet', 'unet2'],
+                        choices=['deeplab_v3+', 'unet', 'unet2', 'd_unet2'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs (default: 1)')
@@ -146,14 +145,10 @@ if __name__ == '__main__':
     # Load Network model
     if net_type == 'deeplab_v3':
         model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
-    elif net_type == 'gcn':
-        model = GCN(n_channels=in_channels, n_classes=n_classes)
-    elif net_type == 'bgcn' or net_type == 'balancedgcn':
-        model = BalancedGCN(n_channels=in_channels, n_classes=n_classes)
-    elif net_type == 'ugcn':
-        model = UGCN(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     elif net_type == 'unet':
         model = Unet(n_channels=in_channels, n_classes=n_classes)
+    elif net_type == 'd_unet':
+        model = DilatedUnet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     else:
         model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     #print(net)
