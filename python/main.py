@@ -152,6 +152,8 @@ if __name__ == '__main__':
         model = BalancedGCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'ugcn':
         model = UGCN(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
+    elif net_type == 'unet':
+        model = Unet(n_channels=in_channels, n_classes=n_classes)
     else:
         model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     #print(net)
