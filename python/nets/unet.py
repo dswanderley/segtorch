@@ -195,9 +195,9 @@ class DilatedUnet2(nn.Module):
         # Set downconvolution layer 4
         self.conv_4 = AtrousConv(24, 32, dilation=2, padding=2)
         # Set downconvolution layer 5
-        self.conv_5 = AtrousConv(32, 40, dilation=3, padding=3)
+        self.conv_5 = AtrousConv(32, 40, dilation=6, padding=6)
         # Set downconvolution layer 6
-        self.conv_6 = AtrousConv(40, 48, dilation=3, padding=3)
+        self.conv_6 = AtrousConv(40, 48, dilation=12, padding=12)
 
         # Set upconvolution layer 1
         self.conv_up1 = upconv(48, 128, res_ch=16, dropout=0, bilinear=bilinear)

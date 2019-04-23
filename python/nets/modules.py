@@ -200,6 +200,53 @@ class AtrousConv(nn.Module):
         return x
 
 
+class GlobalAvgPool(nn.Module):
+    '''
+    Atrous or dilated convolution layer
+    '''
+    def __init__(self, in_ch, out_ch, batch_norm=True, dropout=0):
+        ''' Constructor '''
+        super(GlobalAvgPool, self).__init__()
+        # parameters
+        self.in_ch = in_ch
+        self.out_ch = out_ch
+        self.batch_norm = batch_norm
+        self.dropout = dropout
+        # Set conv layer
+        self.conv = nn.Sequential()
+        self.conv.add_module("avg_pool", nn.AdaptiveAvgPool2d((1, 1)))
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size=1, bias=False))
+        if batch_norm:
+            self.conv.add_module("bnorm_1", nn.BatchNorm2d(out_ch))
+        if dropout > 0:
+            self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
+
+    def forward(self, x):
+        ''' Foward method '''
+        x = self.conv(x)
+        return x
+
+class ASPP(nn.Module):
+    def __init__(self, inplanes, planes, dilation):
+        super(ASPP, self).__init__()
+        if dilation == 1:
+            kernel_size = 1
+            padding = 0
+        else:
+            kernel_size = 3
+            padding = dilation
+        self.atrous_convolution = nn.Conv2d(inplanes, planes, kernel_size=kernel_size,
+                                            stride=1, padding=padding, dilation=dilation, bias=False)
+        self.bn = BatchNorm2d(planes)
+        self.relu = nn.ReLU()
+
+        self._init_weight()
+
+    def forward(self, x):
+        x = self.atrous_convolution(x)
+        x = self.bn(x)
+
+
 class globalconv(nn.Module):
     '''
         Global Convolutional module
