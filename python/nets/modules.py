@@ -81,6 +81,43 @@ class downconv(nn.Module):
         return x
 
 
+class encoding(nn.Module):
+    '''
+    Enconding layer (conv + conv)
+    '''
+    def __init__(self, in_ch, out_ch, kernel_size=3, padding=1, stride=1, batch_norm=True, dropout=0):
+        ''' Constructor '''
+        super(encoding, self).__init__()
+        # Properties
+        self.kernel_size = kernel_size
+        self.padding = padding
+        self.dropout = 0
+        self.batch_norm = batch_norm
+        self.dropout = dropout
+        self.stride1 = 1
+        self.stride2 = stride
+
+        # Conv layer
+        self.conv = nn.Sequential()
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size, stride=self.stride1, padding=padding))
+        if batch_norm:
+            self.conv.add_module("bnorm_1", nn.BatchNorm2d(out_ch))
+        self.conv.add_module("relu_1", nn.ReLU(inplace=True))
+
+        # Conv + pooling
+        self.conv.add_module("conv_2", nn.Conv2d(out_ch, out_ch, kernel_size, stride=self.stride2, padding=padding))
+        if batch_norm:
+            self.conv.add_module("bnorm_2", nn.BatchNorm2d(out_ch))
+        if dropout > 0:
+            self.conv.add_module("dropout", nn.Dropout2d(dropout))
+        self.conv.add_module("relu_2", nn.ReLU(inplace=True))
+
+    def forward(self, x):
+        ''' Foward method '''
+        x = self.conv(x)
+        return x
+
+
 class upconv(nn.Module):
     '''
     Upconvolution layer
@@ -95,7 +132,7 @@ class upconv(nn.Module):
             self.up = nn.ConvTranspose2d(in_ch, in_ch, 2, stride=2)
         # Set conv layer
         self.conv = nn.Sequential()
-        self.conv.add_module("fwdconv_1", fwdconv(in_ch+res_ch, out_ch, batch_norm=True, dropout=0))
+        self.conv.add_module("fwdconv_1", fwdconv(in_ch+res_ch, out_ch, batch_norm=True, dropout=dropout))
         self.conv.add_module("fwdconv_2", fwdconv(out_ch, out_ch))
 
     def forward(self, x, x_res=None):
@@ -128,6 +165,34 @@ class outconv(nn.Module):
             self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
         self.conv.add_module("relu_1",nn.ReLU(inplace=True))
 
+
+    def forward(self, x):
+        ''' Foward method '''
+        x = self.conv(x)
+        return x
+
+
+class AtrousConv(nn.Module):
+    '''
+    Atrous or dilated convolution layer
+    '''
+    def __init__(self, in_ch, out_ch, kernel_size=3, dilation=2, padding=1, batch_norm=True, dropout=0):
+        ''' Constructor '''
+        super(AtrousConv, self).__init__()
+        # parameters
+        self.kernel_size = kernel_size
+        self.batch_norm = batch_norm
+        self.dropout = dropout
+        self.dilation = dilation
+        self.padding = padding
+        # Set conv layer
+        self.conv = nn.Sequential()
+        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size=kernel_size, stride=1, dilation=dilation, padding=padding, bias=False))
+        if batch_norm:
+            self.conv.add_module("bnorm_1",nn.BatchNorm2d(out_ch))
+        if dropout > 0:
+            self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
+        self.conv.add_module("relu_1",nn.ReLU(inplace=True))
 
     def forward(self, x):
         ''' Foward method '''
