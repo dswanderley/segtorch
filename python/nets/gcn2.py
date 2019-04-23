@@ -15,7 +15,7 @@ class BR(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.conv1 = nn.Conv2d(out_c,out_c, kernel_size=3,padding=1)
         self.conv2 = nn.Conv2d(out_c,out_c, kernel_size=3,padding=1)
-    
+
     def forward(self,x):
         x_res = x
 #         x_res = self.bn(x)
@@ -24,9 +24,9 @@ class BR(nn.Module):
 #         x_res = self.bn(x_res)
         x_res = self.relu(x_res)
         x_res = self.conv2(x_res)
-        
+
         x = x + x_res
-        
+
         return x
 
 
@@ -37,16 +37,16 @@ class GCN_block(nn.Module):
         self.conv_l2 = nn.Conv2d(out_c, out_c, kernel_size=(1,k), padding =(0,(k-1)/2))
         self.conv_r1 = nn.Conv2d(c, out_c, kernel_size=(1,k), padding =((k-1)/2,0))
         self.conv_r2 = nn.Conv2d(out_c, out_c, kernel_size=(k,1), padding =(0,(k-1)/2))
-        
+
     def forward(self, x):
         x_l = self.conv_l1(x)
         x_l = self.conv_l2(x_l)
-        
+
         x_r = self.conv_r1(x)
         x_r = self.conv_r2(x_r)
-        
+
         x = x_l + x_r
-        
+
         return x
 
 
@@ -56,13 +56,13 @@ class bottleneck_GCN(nn.Module):
         self.bn_m = nn.BatchNorm2d(m)
         self.bn_c = nn.BatchNorm2d(c)
         self.relu = nn.ReLU(inplace=True)
-        
+
         self.conv_l1 = nn.Conv2d(c, m, kernel_size=(k,1), padding =((k-1)/2,0))
         self.conv_l2 = nn.Conv2d(m, m, kernel_size=(1,k), padding =(0,(k-1)/2))
         self.conv_r1 = nn.Conv2d(c, m, kernel_size=(1,k), padding =((k-1)/2,0))
         self.conv_r2 = nn.Conv2d(m, m, kernel_size=(k,1), padding =(0,(k-1)/2))
         self.conv_f = n.Con2vd(m, c, kernel_size=1, padding=0)
-        
+
     def forward(self,x):
         x_res_l = self.conv_l1(x)
         x_res_l = self.bn_m(x_res_l)
@@ -70,20 +70,20 @@ class bottleneck_GCN(nn.Module):
         x_res_l = self.conv_l2(x_res_l)
         x_res_l = self.bn_m(x_res_l)
         x_res_l = self.relu(x_res_l)
-        
+
         x_res_r = self.conv_r1(x)
         x_res_r = self.bn_m(x_res_r)
         x_res_r = self.relu(x_res_r)
         x_res_r = self.conv_r2(x_res_r)
         x_res_r = self.bn_m(x_res_r)
         x_res_r = self.relu(x_res_r)
-        
+
         x_res = x_res_l + x_res_r
         x_res = self.conv_f(x_res)
         x_res = self.bn_c(x_res)
-        
+
         x = x + x_res
-        
+
         return x
 
 
@@ -91,22 +91,22 @@ class FCN_GCN(nn.Module):
     def __init__(self, n_channels, num_classes):
         self.num_classes = num_classes #21 in paper
         super(FCN_GCN, self).__init__()
-        
+
         # Input conv is applied to convert the input to 3 ch depth
         self.inconv = fwdconv(n_channels, 3, kernel_size=1, padding=0)
-        
+
         resnet = models.resnet50(pretrained=True)
-        
+
         self.conv1 = resnet.conv1 # 7x7,64, stride=2 (output_size=112x112)
         self.bn0 = resnet.bn1 #BatchNorm2d(64)
         self.relu = resnet.relu
         self.maxpool = resnet.maxpool # maxpool /2 (kernel_size=3, stride=2, padding=1)
-        
+
         self.layer1 = resnet.layer1 #res-2 o/p = 56x56,256
         self.layer2 = resnet.layer2 #res-3 o/p = 28x28,512
         self.layer3 = resnet.layer3 #res-4 o/p = 14x14,1024
         self.layer4 = resnet.layer4 #res-5 o/p = 7x7,2048
-        
+
         self.gcn1 = GCN_block(256,self.num_classes,55) #gcn_i after layer-1
         self.gcn2 = GCN_block(512,self.num_classes,27)
         self.gcn3 = GCN_block(1024,self.num_classes,13)
@@ -128,9 +128,8 @@ class FCN_GCN(nn.Module):
             nn.BatchNorm2d(in_c/2),
             nn.ReLU(inplace=True),
             nn.Dropout(.1),
-            nn.Conv2d(in_c/2, self.num_classes, 1),
-
-            )    
+            nn.Conv2d(in_c/2, self.num_classes, 1)
+            )
 
     def forward(self,x):
         input = x
@@ -142,7 +141,7 @@ class FCN_GCN(nn.Module):
         x = self.maxpool(x)
         pooled_x = x
 
-        fm1 = self.layer1(x) 
+        fm1 = self.layer1(x)
         fm2 = self.layer2(fm1)
         fm3 = self.layer3(fm2)
         fm4 = self.layer4(fm3)
