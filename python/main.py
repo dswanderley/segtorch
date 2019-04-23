@@ -22,6 +22,7 @@ from torch import optim
 from utils.logger import Logger
 from nets.deeplab import DeepLabv3_plus
 from nets.unet import *
+from nets.dilation import *
 from utils.datasets import OvaryDataset, VOC2012Dataset
 from utils.losses import *
 from train import Training
@@ -53,7 +54,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PyTorch segmentation network training and prediction.")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['deeplab_v3+', 'unet', 'unet2', 'd_unet2'],
+                        choices=['can', 'deeplab_v3+', 'unet', 'unet2', 'd_unet2'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs (default: 1)')
@@ -143,7 +144,9 @@ if __name__ == '__main__':
     train_name = gettrainname(network_name)
 
     # Load Network model
-    if net_type == 'deeplab_v3':
+    if net_type == 'can':
+        model = CAN(in_channels, n_classes)
+    elif net_type == 'deeplab_v3':
         model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
     elif net_type == 'unet':
         model = Unet(n_channels=in_channels, n_classes=n_classes)
