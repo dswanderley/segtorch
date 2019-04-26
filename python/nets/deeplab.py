@@ -195,7 +195,7 @@ class DeepLabv3_plus(nn.Module):
         super(DeepLabv3_plus, self).__init__()
 
         # Input conv is applied to convert the input to 3 ch depth
-        self.inconv = fwdconv(nInputChannels, 3, kernel_size=1, padding=0)
+        self.inconv = FwdConv(nInputChannels, 3, kernel_size=1, padding=0)
 
         # Atrous Conv
         self.resnet_features = ResNet101(3, os, pretrained=pretrained)

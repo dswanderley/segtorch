@@ -26,7 +26,7 @@ class GCN(nn.Module):
         self.n_classes = n_classes
 
         # Input conv is applied to convert the input to 3 ch depth
-        self.inconv = fwdconv(n_channels, 3, kernel_size=1, padding=0)
+        self.inconv = FwdConv(n_channels, 3, kernel_size=1, padding=0)
 
         # Load Resnet
         resnet = models.resnet50(pretrained=True)
@@ -44,28 +44,28 @@ class GCN(nn.Module):
         self.resnet4 = resnet.layer4 # res-5 -> (depth) in: 1024, out: 2048
 
         # GCN Layers
-        self.gcn1 = globalconv(256,  n_classes, k=55)
-        self.gcn2 = globalconv(512,  n_classes, k=27)
-        self.gcn3 = globalconv(1024, n_classes, k=13)
-        self.gcn4 = globalconv(2048, n_classes, k=7)
+        self.gcn1 = GlobalConv(256,  n_classes, k=55)
+        self.gcn2 = GlobalConv(512,  n_classes, k=27)
+        self.gcn3 = GlobalConv(1024, n_classes, k=13)
+        self.gcn4 = GlobalConv(2048, n_classes, k=7)
 
         # Boundary Refine layers
-        self.br1 = brconv(n_classes)
-        self.br2 = brconv(n_classes)
-        self.br3 = brconv(n_classes)
-        self.br4 = brconv(n_classes)
-        self.br5 = brconv(n_classes)
-        self.br6 = brconv(n_classes)
-        self.br7 = brconv(n_classes)
-        self.br8 = brconv(n_classes)
-        self.br9 = brconv(n_classes)
+        self.br1 = BrConv(n_classes)
+        self.br2 = BrConv(n_classes)
+        self.br3 = BrConv(n_classes)
+        self.br4 = BrConv(n_classes)
+        self.br5 = BrConv(n_classes)
+        self.br6 = BrConv(n_classes)
+        self.br7 = BrConv(n_classes)
+        self.br8 = BrConv(n_classes)
+        self.br9 = BrConv(n_classes)
 
         # Deconv
-        self.deconv1 = upconv(n_classes, n_classes) # Spatial size 16 x 16 -> 32 x 32
-        self.deconv2 = upconv(n_classes, n_classes) # Spatial size 32 x 32 -> 64 x 64
-        self.deconv3 = upconv(n_classes, n_classes) # Spatial size 64 x 64 -> 128x128
-        self.deconv4 = upconv(n_classes, n_classes) # Spatial size 128x128 -> 256x256
-        self.deconv5 = upconv(n_classes, n_classes) # Spatial size 256x256 -> 512x512
+        self.deconv1 = UpConv(n_classes, n_classes) # Spatial size 16 x 16 -> 32 x 32
+        self.deconv2 = UpConv(n_classes, n_classes) # Spatial size 32 x 32 -> 64 x 64
+        self.deconv3 = UpConv(n_classes, n_classes) # Spatial size 64 x 64 -> 128x128
+        self.deconv4 = UpConv(n_classes, n_classes) # Spatial size 128x128 -> 256x256
+        self.deconv5 = UpConv(n_classes, n_classes) # Spatial size 256x256 -> 512x512
 
         # Softmax
         self.softmax = nn.Softmax2d()
@@ -138,7 +138,7 @@ class BalancedGCN(nn.Module):
         self.convout = convout
 
         # Input conv is applied to convert the input to 3 ch depth
-        self.inconv = fwdconv(n_channels, 3, kernel_size=1, padding=0)
+        self.inconv = FwdConv(n_channels, 3, kernel_size=1, padding=0)
 
         # Load Resnet
         resnet = models.resnet50(pretrained=True)
@@ -156,28 +156,28 @@ class BalancedGCN(nn.Module):
         self.resnet4 = resnet.layer4 # res-5 -> (depth) in: 1024, out: 2048
 
         # GCN Layers
-        self.gcn1 = globalconv(256,  64, k=55, batch_norm=bnorm, reg=reg, convout=convout)
-        self.gcn2 = globalconv(512,  256, k=27, batch_norm=bnorm, reg=reg, convout=convout)
-        self.gcn3 = globalconv(1024, 512, k=13, batch_norm=bnorm, reg=reg, convout=convout)
-        self.gcn4 = globalconv(2048, 1024, k=7, batch_norm=bnorm, reg=reg, convout=convout)
+        self.gcn1 = GlobalConv(256,  64, k=55, batch_norm=bnorm, reg=reg, convout=convout)
+        self.gcn2 = GlobalConv(512,  256, k=27, batch_norm=bnorm, reg=reg, convout=convout)
+        self.gcn3 = GlobalConv(1024, 512, k=13, batch_norm=bnorm, reg=reg, convout=convout)
+        self.gcn4 = GlobalConv(2048, 1024, k=7, batch_norm=bnorm, reg=reg, convout=convout)
 
         # Boundary Refine layers
-        self.br1 = brconv(64, bnorm=bnorm, reg=reg, convout=convout)
-        self.br2 = brconv(256, bnorm=bnorm, reg=reg, convout=convout)
-        self.br3 = brconv(512, bnorm=bnorm, reg=reg, convout=convout)
-        self.br4 = brconv(1024, bnorm=bnorm, reg=reg, convout=convout)
-        self.br5 = brconv(512, bnorm=bnorm, reg=reg, convout=convout)
-        self.br6 = brconv(256, bnorm=bnorm, reg=reg, convout=convout)
-        self.br7 = brconv(64, bnorm=bnorm, reg=reg, convout=convout)
-        self.br8 = brconv(16, bnorm=bnorm, reg=reg, convout=convout)
-        self.br9 = brconv(3, bnorm=bnorm, reg=reg, convout=convout)
+        self.br1 = BrConv(64, bnorm=bnorm, reg=reg, convout=convout)
+        self.br2 = BrConv(256, bnorm=bnorm, reg=reg, convout=convout)
+        self.br3 = BrConv(512, bnorm=bnorm, reg=reg, convout=convout)
+        self.br4 = BrConv(1024, bnorm=bnorm, reg=reg, convout=convout)
+        self.br5 = BrConv(512, bnorm=bnorm, reg=reg, convout=convout)
+        self.br6 = BrConv(256, bnorm=bnorm, reg=reg, convout=convout)
+        self.br7 = BrConv(64, bnorm=bnorm, reg=reg, convout=convout)
+        self.br8 = BrConv(16, bnorm=bnorm, reg=reg, convout=convout)
+        self.br9 = BrConv(3, bnorm=bnorm, reg=reg, convout=convout)
 
         # Deconv
-        self.deconv1 = upconv(1024, 512) # Spatial size 16 x 16 -> 32 x 32
-        self.deconv2 = upconv(512, 256) # Spatial size 32 x 32 -> 64 x 64
-        self.deconv3 = upconv(256, 64) # Spatial size 64 x 64 -> 128x128
-        self.deconv4 = upconv(64, 16) # Spatial size 128x128 -> 256x256
-        self.deconv5 = upconv(16, 3) # Spatial size 256x256 -> 512x512
+        self.deconv1 = UpConv(1024, 512) # Spatial size 16 x 16 -> 32 x 32
+        self.deconv2 = UpConv(512, 256) # Spatial size 32 x 32 -> 64 x 64
+        self.deconv3 = UpConv(256, 64) # Spatial size 64 x 64 -> 128x128
+        self.deconv4 = UpConv(64, 16) # Spatial size 128x128 -> 256x256
+        self.deconv5 = UpConv(16, 3) # Spatial size 256x256 -> 512x512
 
         # Softmax
         self.softmax = nn.Softmax2d()
@@ -251,47 +251,47 @@ class UGCN(nn.Module):
         self.conv_init  = inconv(n_channels, 8)
 
         # Set downconvolution layer 1
-        self.conv_down1 = downconv(8, 8, dropout=0.2) # 512 -> 256
+        self.conv_down1 = DownConv(8, 8, dropout=0.2) # 512 -> 256
         # Set downconvolution layer 2
-        self.conv_down2 = downconv(8, 16, dropout=0.2) # 256 - > 128
+        self.conv_down2 = DownConv(8, 16, dropout=0.2) # 256 - > 128
         # Set downconvolution layer 3
-        self.conv_down3 = downconv(16, 24, dropout=0.2) # 128 -> 64
+        self.conv_down3 = DownConv(16, 24, dropout=0.2) # 128 -> 64
         # Set downconvolution layer 4
-        self.conv_down4 = downconv(24, 32, dropout=0.2) # 64 -> 32
+        self.conv_down4 = DownConv(24, 32, dropout=0.2) # 64 -> 32
         # Set downconvolution layer 5
-        self.conv_down5 = downconv(32, 40, dropout=0.2) # 32 -> 16
+        self.conv_down5 = DownConv(32, 40, dropout=0.2) # 32 -> 16
         # Set downconvolution layer 6
-        self.conv_down6 = downconv(40, 48, dropout=0.2) # 16 -> 8
+        self.conv_down6 = DownConv(40, 48, dropout=0.2) # 16 -> 8
 
         # GCN Layers
-        self.gcn0 = globalconv(8, 8, k=221, batch_norm=True, reg=True, convout=True) # 512
-        self.gcn1 = globalconv(8, 8, k=111, batch_norm=True, reg=True, convout=True) # 256
-        self.gcn2 = globalconv(16, 16, k=55, batch_norm=True, reg=True, convout=True) # 128
-        self.gcn3 = globalconv(24, 24, k=27, batch_norm=True, reg=True, convout=True) # 64
-        self.gcn4 = globalconv(32, 32, k=13, batch_norm=True, reg=True, convout=True) # 32
-        self.gcn5 = globalconv(40, 40, k=7, batch_norm=True, reg=True, convout=True) # 16
+        self.gcn0 = GlobalConv(8, 8, k=221, batch_norm=True, reg=True, convout=True) # 512
+        self.gcn1 = GlobalConv(8, 8, k=111, batch_norm=True, reg=True, convout=True) # 256
+        self.gcn2 = GlobalConv(16, 16, k=55, batch_norm=True, reg=True, convout=True) # 128
+        self.gcn3 = GlobalConv(24, 24, k=27, batch_norm=True, reg=True, convout=True) # 64
+        self.gcn4 = GlobalConv(32, 32, k=13, batch_norm=True, reg=True, convout=True) # 32
+        self.gcn5 = GlobalConv(40, 40, k=7, batch_norm=True, reg=True, convout=True) # 16
 
         # Set upconvolution layer 1
-        self.conv_up1 = upconv(48, 320, res_ch=40, dropout=0.2, bilinear=bilinear)
+        self.conv_up1 = UpConv(48, 320, res_ch=40, dropout=0.2, bilinear=bilinear)
         # Set upconvolution layer 2
-        self.conv_up2 = upconv(320, 256, res_ch=32, dropout=0.2, bilinear=bilinear)
+        self.conv_up2 = UpConv(320, 256, res_ch=32, dropout=0.2, bilinear=bilinear)
         # Set upconvolution layer 3
-        self.conv_up3 = upconv(256, 192, res_ch=24, dropout=0.2, bilinear=bilinear)
+        self.conv_up3 = UpConv(256, 192, res_ch=24, dropout=0.2, bilinear=bilinear)
         # Set upconvolution layer 4
-        self.conv_up4 = upconv(192, 128, res_ch=16, dropout=0.2, bilinear=bilinear)
+        self.conv_up4 = UpConv(192, 128, res_ch=16, dropout=0.2, bilinear=bilinear)
         # Set upconvolution layer 5
-        self.conv_up5 = upconv(128, 64, res_ch=8, dropout=0.2, bilinear=bilinear)
+        self.conv_up5 = UpConv(128, 64, res_ch=8, dropout=0.2, bilinear=bilinear)
         # Set upconvolution layer 6
-        self.conv_up6 = upconv(64, 8, res_ch=8, dropout=0.2, bilinear=bilinear)
+        self.conv_up6 = UpConv(64, 8, res_ch=8, dropout=0.2, bilinear=bilinear)
 
         # Set output layer
         if type(n_classes) is list:
             self.conv_out = nn.ModuleList() # necessary for GPU convertion
             for n in n_classes:
-                c_out = outconv(8, n)
+                c_out = OutConv(8, n)
                 self.conv_out.append(c_out)
         else:
-            self.conv_out = outconv(8, n_classes)
+            self.conv_out = OutConv(8, n_classes)
         # Define Softmax
         self.softmax = nn.Softmax2d()
 

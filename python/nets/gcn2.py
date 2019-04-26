@@ -93,7 +93,7 @@ class FCN_GCN(nn.Module):
         super(FCN_GCN, self).__init__()
 
         # Input conv is applied to convert the input to 3 ch depth
-        self.inconv = fwdconv(n_channels, 3, kernel_size=1, padding=0)
+        self.inconv = FwdConv(n_channels, 3, kernel_size=1, padding=0)
 
         resnet = models.resnet50(pretrained=True)
 

@@ -83,5 +83,5 @@ class GanSeg(nn.Module):
         # Output
         x_out = self.discriminator(x_1)
 
-        return x_out 
+        return x_out
 
