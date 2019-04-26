@@ -189,32 +189,30 @@ class ConvSequence(nn.Module):
             bnorm = self.batch_norm[i]
             ksize = self.kernel_size[i]
             zpad = self.padding[i]
-        # Add Convolution
-        self.conv.add_module("conv_" + idx,
-                            nn.Conv2d(ich, och, ksize, stride=std, padding=zpad)
+            # Add Convolution
+            self.conv.add_module("conv_" + idx,
+                                nn.Conv2d(ich, och, ksize, stride=std, padding=zpad)
+                                )
+            # Add Batch Normalization
+            if bnorm:
+                self.conv.add_module("bnorm_" + idx,
+                                nn.BatchNorm2d(out_ch)
+                                )
+            # Add Dropout (to the last block)
+            if (i == n_vols - 1) and (self.dropout > 0):
+                self.conv.add_module("dropout",
+                            nn.Dropout2d(dropout)
                             )
-        # Add Batch Normalization
-        if bnorm:
-            self.conv.add_module("bnorm_" + idx,
-                            nn.BatchNorm2d(out_ch)
+            # Add activation fucntion
+            self.conv.add_module("relu_" + idx,
+                            nn.ReLU(inplace=True)
                             )
-        # Add Dropout (to the last block)
-        if (i == n_vols - 1) and (self.dropout > 0):
-            self.conv.add_module("dropout",
-                        nn.Dropout2d(dropout)
-                        )
-        # Add activation fucntion
-        self.conv.add_module("relu_" + idx,
-                        nn.ReLU(inplace=True)
-                        )
 
 
     def forward(self, x):
         ''' Foward method '''
         x = self.conv(x)
         return x
-
-
 
 
 class UpConv(nn.Module):
@@ -231,8 +229,8 @@ class UpConv(nn.Module):
             self.up = nn.ConvTranspose2d(in_ch, in_ch, 2, stride=2)
         # Set conv layer
         self.conv = nn.Sequential()
-        self.conv.add_module("fwdconv_1", FwdConv(in_ch+res_ch, out_ch, batch_norm=True, dropout=dropout))
-        self.conv.add_module("fwdconv_2", FwdConv(out_ch, out_ch))
+        self.conv.add_module("fwdconv_1", FwdConv(in_ch+res_ch, out_ch, batch_norm=batch_norm, dropout=dropout))
+        self.conv.add_module("fwdconv_2", FwdConv(out_ch, out_ch, batch_norm=batch_norm))
 
     def forward(self, x, x_res=None):
         ''' Foward method '''
@@ -499,5 +497,8 @@ class BrConv(nn.Module):
 # Main calls
 if __name__ == '__main__':
 
-    block = ConvSequence(3,[6,6,9],3, kernel_size=[5,3,3])
-    print(block)
+    block = ConvSequence(1,[8,8],2, kernel_size=[3,3])
+    #print(block)
+    x = torch.rand(1,1,512,512)
+    y=block(x)
+    print(y)
