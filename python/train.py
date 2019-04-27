@@ -68,18 +68,18 @@ class Training:
 
         # Batch iteration - Training dataset
         for batch_idx, sample in enumerate(data_loader_train):
-            
+
             # Load data
             image = sample['image'].to(self.device)
             tgt_mask = []
             for tgt_str in self.target:
                 tgt_mask.append(sample[tgt_str].to(self.device))
-            
+
             # Handle input
             if len(image.size()) < 4:
                 image.unsqueeze_(1) # add a dimension to the tensor
 
-            # Run prediction            
+            # Run prediction
             pred_masks = self.model(image)
             # Handle multiples outputs
             if type(pred_masks) is list:

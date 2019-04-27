@@ -30,7 +30,7 @@ def select_clicks(fmap, rate=.7, margin=.5):
     n_elements = fmap.max()
     # Convert to %
     margin_dist = int(margin * 100)
-    
+
     points = []
     for j in range(1, n_elements+1):
         # Draw a value acording the initial probability rate
@@ -46,13 +46,13 @@ def select_clicks(fmap, rate=.7, margin=.5):
             # Get bouding box height and width
             delta_x = slice_x.stop - slice_x.start
             delta_y = slice_y.stop - slice_y.start
-            # Calculate 
+            # Calculate
             margin = random.randint(-margin_dist, margin_dist) / 100.
             new_x = round(center[0] + margin * delta_x / 2)
             new_y = round(center[1] + margin * delta_y / 2)
 
             points.append((new_x, new_y))
-    
+
     return points
 
 
@@ -75,7 +75,7 @@ def iteractive_map(points, height, width):
         dist_maps[...,i] =  np.clip(np.sqrt(xv + yv), 0, 255)
     # Get minimum value in the third axis
     psf_map = dist_maps.min(axis=2)
-    
+
     return psf_map / 255.
 
 
@@ -235,7 +235,7 @@ class OvaryDataset(Dataset):
             # follicle mask
             fol_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 2))
             fol_mask[...,1] = mask_follicle / 255.
-            fol_mask[...,0] = 1. - fol_mask[...,1]             
+            fol_mask[...,0] = 1. - fol_mask[...,1]
             fol_mask = (fol_mask).astype(np.float32)
             # final edge
             fol_edge = np.zeros((gt_np.shape[0], gt_np.shape[1], 2))
@@ -252,7 +252,7 @@ class OvaryDataset(Dataset):
         '''
         # Get mask labeling each follicle from 1 to N value.
         inst_mask, num_inst = ndi.label(mask_follicle)
-            
+
         '''
             Interactive Object Selection
         '''
@@ -268,7 +268,7 @@ class OvaryDataset(Dataset):
             imap_fol = iteractive_map(selected_points, im_np.shape[0], im_np.shape[1])
             imap_fol = imap_fol.reshape(imap_fol.shape+(1,))
             im_np = np.concatenate((im_np, imap_fol), axis=2).astype(np.float32)
-        
+
         '''
             Input data: Add CLAHE if necessary
         '''
@@ -286,7 +286,7 @@ class OvaryDataset(Dataset):
         #Image.fromarray((255*gt_mask).astype(np.uint8)).save("gt_all.png")
         #Image.fromarray((255*fol_edge[...,1]).astype(np.uint8)).save("gt_edg.png")
         #Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
-        
+
         # Convert to torch (to be used on DataLoader)
 
         torch_im = torch.from_numpy(im_np)
@@ -370,7 +370,7 @@ class VOC2012Dataset(Dataset):
                         [  0,  64, 128], # tv monitor
                         [224, 224, 192], # void
                         ]
-                        
+
         with open(file_list) as f:
             flist = f.read().splitlines()
         self.images_name = flist
@@ -403,7 +403,7 @@ class VOC2012Dataset(Dataset):
             Load images
         '''
         # Image names: equal for original image and ground truth image
-        im_name = self.images_name[idx] 
+        im_name = self.images_name[idx]
         jpg_name = im_name + '.jpg'
         # Load Original Image (RGB)
         im_path = os.path.join(self.im_dir, jpg_name)    # PIL image in [0,255], 1 channel
@@ -430,7 +430,7 @@ class VOC2012Dataset(Dataset):
         p_right = int(p_left + w)
         p_top = int(round((self.height - h) / 2))
         p_down = int(p_top + h)
-        
+
         im_box = {'top': p_top,
                 'bottom': p_down,
                 'left': p_left,
@@ -452,8 +452,8 @@ class VOC2012Dataset(Dataset):
         gt_square_p[p_top:p_down, p_left:p_right] = gt_np
         # Define lables from 0 (background) to n_classes-1 and add void idx
         labels_idx = list(range(self.n_classes-1)) +  [255]
-        if self.one_hot:                    
-            gt_square = np.zeros((self.height, self.width, self.n_classes))     
+        if self.one_hot:
+            gt_square = np.zeros((self.height, self.width, self.n_classes))
             for c in range(self.n_classes):
                 mask = np.zeros((gt_square.shape[0], gt_square.shape[1]))
                 mask[(gt_square_p == labels_idx[c])] = 1.
@@ -473,7 +473,7 @@ class VOC2012Dataset(Dataset):
         torch_gt = torch.from_numpy(gt_square.astype(np.float32))
         if len(torch_gt.shape) > 2:
             torch_gt = torch_gt.permute(2, 0, 1).contiguous()
-      
+
 
         sample =  { 'im_name': im_name,
                     'image': torch_im,

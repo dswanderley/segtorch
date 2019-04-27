@@ -185,7 +185,7 @@ if __name__ == '__main__':
     # Training Parameters
     if opt == 'adam':
         optmizer = optim.Adam(model.parameters(), lr=0.001)
-    if opt == 'adamax':
+    elif opt == 'adamax':
         optmizer = optim.Adam(model.parameters(), lr=0.002)
     else:
         optmizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.99, weight_decay=0.0005)
