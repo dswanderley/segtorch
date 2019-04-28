@@ -200,7 +200,7 @@ if __name__ == '__main__':
         train_name += '_wdsc'
     elif loss == 'discriminative' or loss == 'dlf':
         loss_function = DiscriminativeLoss(n_features=2)
-        train_name += '_dlf
+        train_name += '_dlf'
     else:
         loss_function = nn.CrossEntropyLoss()
         train_name += '_entp'
