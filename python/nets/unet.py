@@ -81,9 +81,9 @@ class Unet(nn.Module):
 
 class UnetLight(nn.Module):
     '''
-    U-net class
+    U-net light class (same as U-net but lower number of convs).
     '''
-    def __init__(self, n_channels, n_classes, bilinear=False, dropout=[0,0]):
+    def __init__(self, n_channels, n_classes, bilinear=False, dropout=[0,0.2]):
         ''' Constructor '''
         super(UnetLight, self).__init__()
 
