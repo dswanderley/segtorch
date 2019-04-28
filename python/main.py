@@ -187,18 +187,23 @@ if __name__ == '__main__':
         optmizer = optim.Adam(model.parameters(), lr=0.001)
     elif opt == 'adamax':
         optmizer = optim.Adam(model.parameters(), lr=0.002)
+        train_name += '_adamax'
     else:
         optmizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.99, weight_decay=0.0005)
+        train_name += '_sdg'
 
     # Loss function
     if loss == 'dsc' or loss == 'dice':
         loss_function = DiceLoss()
     elif loss == 'wdice' or loss == 'weighted_dice':
         loss_function = WeightedDiceLoss()
+        train_name += '_wdsc'
     elif loss == 'discriminative' or loss == 'dlf':
         loss_function = DiscriminativeLoss(n_features=2)
+        train_name += '_dlf
     else:
         loss_function = nn.CrossEntropyLoss()
+        train_name += '_entp'
 
     # Set logs folder
     logger = Logger('../logs/' + train_name + '/')
