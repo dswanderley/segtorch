@@ -153,7 +153,7 @@ if __name__ == '__main__':
     elif net_type == 'gcn':
         model = GCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'gcn2':
-        model = FCN_GCN(n_channels=in_channels, n_classes=n_classes)
+        model = FCN_GCN(n_channels=in_channels, num_classes=n_classes)
     elif net_type == 'b_gcn':
         model = BalancedGCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'unet':
