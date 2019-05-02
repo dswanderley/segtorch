@@ -23,6 +23,8 @@ from utils.logger import Logger
 from nets.deeplab import DeepLabv3_plus
 from nets.unet import *
 from nets.dilation import *
+from nets.gcn import *
+from nets.gcn2 import *
 from utils.datasets import OvaryDataset, VOC2012Dataset
 from utils.losses import *
 from train import Training
@@ -54,7 +56,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PyTorch segmentation network training and prediction.")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['can', 'deeplab_v3+', 'unet', 'unet_light', 'unet2', 'd_unet2'],
+                        choices=['can', 'deeplab_v3+', 'unet', 'unet_light', 'unet2', 'd_unet2', 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs (default: 1)')
@@ -148,6 +150,12 @@ if __name__ == '__main__':
         model = CAN(in_channels, n_classes)
     elif net_type == 'deeplab_v3':
         model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
+    elif net_type == 'gcn':
+        model = GCN(n_channels=in_channels, n_classes=n_classes)
+    elif net_type == 'gcn2':
+        model = FCN_GCN(n_channels=in_channels, n_classes=n_classes)
+    elif net_type == 'b_gcn':
+        model = BalancedGCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'unet':
         model = Unet(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'unet_light':
