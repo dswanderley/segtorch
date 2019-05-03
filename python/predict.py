@@ -103,9 +103,9 @@ class Inference():
             iname = im_name[0]
             dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item()])
 
-            print(iname)
-            print('Stroma DSC:    {:f}'.format(dsc[1]))
-            print('Follicle DSC:  {:f}'.format(dsc[2]))
+            print('Filename:     {:s}'.format(iname))
+            print('Stroma DSC:   {:f}'.format(dsc[1]))
+            print('Follicle DSC: {:f}'.format(dsc[2]))
             print('')
             # Save prediction
             img_out = pred_final[0].detach().cpu().permute(1,2,0).numpy()

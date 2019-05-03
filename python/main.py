@@ -132,14 +132,15 @@ if __name__ == '__main__':
         in_channels += 1
         network_name = 'i' + network_name
 
-    print(network_name)
-    print('dataset:', dataset_name)
-    print('output classes:', n_classes)
-    print('epochs:', n_epochs)
-    print('batch size:', batch_size)
-    print('optmization:', opt)
-    print('loss funcion:', loss)
-    print('---------------------------')
+    print('--- Network Parameters ---')
+    print('network name:   {:s}'.format(network_name))
+    print('dataset:        {:s}'.format(dataset_name))
+    print('output classes: {:d}'.format(n_classes))
+    print('epochs:         {:d}'.format(n_epochs))
+    print('batch size:     {:d}'.format(batch_size))
+    print('optmization:    {:s}'.format(opt))
+    print('loss funcion:   {:s}'.format(loss))
+    print('--------------------------')
     print('')
 
     # Define training name
