@@ -7,8 +7,10 @@ Created on Wed Mar 03 17:40:00 2019
 @description: Script for network prediction
 """
 
+import os
 import sys
 import csv
+import argparse
 import torch
 import numpy as np
 from PIL import Image
@@ -113,28 +115,71 @@ class Inference():
         self._save_data(dsc_data)
 
 
+
 # Main calls
 if __name__ == '__main__':
 
-    # Model name
-    train_name = '20190322_1721_Unet2'
+    # Load inputs
+    parser = argparse.ArgumentParser(description="PyTorch segmentation network predictions (only ovarian dataset).")
+    parser.add_argument('--net', type=str, default='unet2',
+                        choices=['can', 'deeplab_v3+', 'unet', 'unet_light', 'unet2', 'd_unet2', 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
+                        help='network name (default: unet2)')
+    parser.add_argument('--train_name', type=str, default='20190428_1133_unet2',
+                        help='training name (default: 20190428_1133_unet2)')
+    parser.add_argument('--folder_weigths', type=str, default='../weights/',
+                        help='Weights root folder (default: ../weights/)')
+    parser.add_argument('--folder_preds', type=str, default='../predictions/',
+                        help='Predctions root folder (default: ../predictions/)')
 
-    if(len(sys.argv)>1):
-        train_name = sys.argv[1]
-    print('train name:', train_name)
+    # Parse input data
+    args = parser.parse_args()
 
-    # Load Unet
-    model = Unet2(n_channels=1, n_classes=3)
+    # Input parameters
+    train_name = args.train_name
+    net_type = args.net
+    folder_weights = args.folder_weigths
+    folder_preds = args.folder_preds
+
+    # Define input and output
+    in_channels=1
+    n_classes=3
+
+    bilinear = False
+     # Load Network model
+    if net_type == 'can':
+        model = CAN(in_channels, n_classes)
+    elif net_type == 'deeplab_v3+':
+        model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
+    elif net_type == 'gcn':
+        model = GCN(n_channels=in_channels, n_classes=n_classes)
+    elif net_type == 'gcn2':
+        model = FCN_GCN(n_channels=in_channels, num_classes=n_classes)
+    elif net_type == 'b_gcn':
+        model = BalancedGCN(n_channels=in_channels, n_classes=n_classes)
+    elif net_type == 'unet':
+        model = Unet(n_channels=in_channels, n_classes=n_classes)
+    elif net_type == 'unet_light':
+            model = UnetLight(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
+    elif net_type == 'd_unet':
+        model = DilatedUnet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
+    else:
+        model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
 
     # Load CUDA if exist
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Dataset definitions
-    dataset_test = OvaryDataset(im_dir='../dataset/im/test/', gt_dir='../dataset/gt/test/')
+    dataset_test = OvaryDataset(im_dir='../datasets/ovarian/im/test/', gt_dir='../datasets/ovarian/gt/test/')
 
     # Test network model
     print('Testing')
     print('')
-    weights_path = '../weights/' + train_name + '_weights.pth.tar'
-    inference = Inference(model, device, weights_path)
+    weights_path = folder_weights + train_name + '_weights.pth.tar'
+    # Output folder
+    out_folder = folder_preds + train_name + '/'
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder)
+    # Load inference
+    inference = Inference(model, device, weights_path, folder=out_folder)
+    # Run inference
     inference.predict(dataset_test)
