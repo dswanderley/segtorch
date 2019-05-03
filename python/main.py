@@ -219,7 +219,7 @@ if __name__ == '__main__':
     # Run training
     training = Training(model, device, dataset_train, dataset_val,
                         optmizer, loss_function, target=target,
-                        logger=logger, train_name=train_name)
+                        logger=logger, train_name=train_name, arch=net_type)
     training.train(epochs=n_epochs, batch_size=batch_size)
     print('------------- END OF TRAINING -------------')
     print(' ')
