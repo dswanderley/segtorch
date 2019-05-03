@@ -140,9 +140,7 @@ if __name__ == '__main__':
     print('batch size:     {:d}'.format(batch_size))
     print('optmization:    {:s}'.format(opt))
     print('loss funcion:   {:s}'.format(loss))
-    print('--------------------------')
-    print('')
-
+    
     # Define training name
     train_name = gettrainname(network_name)
 
@@ -165,7 +163,10 @@ if __name__ == '__main__':
         model = DilatedUnet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     else:
         model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
-    #print(net)
+    
+    print('model class:   {:s}'.format(type(model)))
+    print('--------------------------')
+    print('')
 
     # Load CUDA if exist
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

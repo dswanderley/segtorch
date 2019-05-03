@@ -35,8 +35,12 @@ class Inference():
         self.weights_path = weights_path
         self._load_network()
         self.criterion = DiceCoefficients()
-        self.pred_folder = folder
-
+        self.pred_folder = folder + 'pred/'
+        if not os.path.exists(self.pred_folder):
+            os.makedirs(self.pred_folder)
+        self.prob_folder = folder + 'prob/'
+        if not os.path.exists(self.prob_folder):
+            os.makedirs(self.prob_folder)
 
     def _load_network(self):
         '''
@@ -74,7 +78,7 @@ class Inference():
         self.model = self.model.to(self.device)
 
         dsc_data = []
-        dsc_data.append(['name', 'backgound', 'stroma', 'follicles'])
+        dsc_data.append(['name', 'backgound', 'stroma', 'follicles', 'ovary'])
 
         data_loader = DataLoader(images, batch_size=1, shuffle=False)
         for _, sample in enumerate(data_loader):
@@ -82,6 +86,8 @@ class Inference():
             image = sample['image'].to(self.device)
             gt_mask = sample['gt_mask'].to(self.device)
             im_name = sample['im_name']
+            # data size
+            bs, n_classes, height, width =  gt_mask.shape
 
             # Handle input
             if len(image.size()) < 4:
@@ -99,17 +105,28 @@ class Inference():
             # Evaluate - dice
             dsc = self.criterion(pred_final, gt_mask)
 
+            # ovary prediction (interim)
+            ov_mask = sample['ovary_mask'].to(self.device)  # load mask
+            pred_ovary = torch.zeros(1,2, height, width)
+            pred_ovary[:,0,...] = pred_final[:,0,...]
+            pred_ovary[:,1,...] = pred_final[:,1,...] + pred_final[:,2,...]
+            dsc_ov = self.criterion(pred_ovary, ov_mask)
+
             # Display evaluation
             iname = im_name[0]
-            dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item()])
+            dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item(), dsc_ov[1]])
 
             print('Filename:     {:s}'.format(iname))
             print('Stroma DSC:   {:f}'.format(dsc[1]))
             print('Follicle DSC: {:f}'.format(dsc[2]))
+            print('Ovary DSC:    {:f}'.format(dsc_ov[1]))
             print('')
             # Save prediction
             img_out = pred_final[0].detach().cpu().permute(1,2,0).numpy()
             Image.fromarray((255*img_out).astype(np.uint8)).save(self.pred_folder + iname)
+            # Save probabilities
+            img_prob = pred[0].detach().cpu().permute(1,2,0).numpy()
+            Image.fromarray((255*img_prob).astype(np.uint8)).save(self.prob_folder + iname)
 
         self._save_data(dsc_data)
 
