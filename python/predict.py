@@ -107,7 +107,7 @@ class Inference():
 
             # ovary prediction (interim)
             ov_mask = sample['ovary_mask'].to(self.device)  # load mask
-            pred_ovary = torch.zeros(1,2, height, width)
+            pred_ovary = torch.zeros(1,2, height, width).to(self.device)
             pred_ovary[:,0,...] = pred_final[:,0,...]
             pred_ovary[:,1,...] = pred_final[:,1,...] + pred_final[:,2,...]
             dsc_ov = self.criterion(pred_ovary, ov_mask)

@@ -230,5 +230,10 @@ if __name__ == '__main__':
     print('Testing')
     print('')
     weights_path = '../weights/' + train_name + '_weights.pth.tar'
-    inference = Inference(model, device, weights_path)
+    # Output folder
+    out_folder = '../predictions/' + train_name + '/'
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder)
+    # Load inference
+    inference = Inference(model, device, weights_path, folder=out_folder)
     inference.predict(dataset_test)
