@@ -148,7 +148,7 @@ if __name__ == '__main__':
     # Load Network model
     if net_type == 'can':
         model = CAN(in_channels, n_classes)
-    elif net_type == 'deeplab_v3':
+    elif net_type == 'deeplab_v3+':
         model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
     elif net_type == 'gcn':
         model = GCN(n_channels=in_channels, n_classes=n_classes)
