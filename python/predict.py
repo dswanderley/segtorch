@@ -16,7 +16,8 @@ import numpy as np
 from PIL import Image
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from nets.unet import Unet2
+from nets.unet import *
+from nets.gcn import *
 from utils.datasets import OvaryDataset
 from utils.losses import DiceCoefficients
 

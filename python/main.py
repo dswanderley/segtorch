@@ -24,7 +24,6 @@ from nets.deeplab import DeepLabv3_plus
 from nets.unet import *
 from nets.dilation import *
 from nets.gcn import *
-from nets.gcn2 import *
 from utils.datasets import OvaryDataset, VOC2012Dataset
 from utils.losses import *
 from train import Training
@@ -151,8 +150,6 @@ if __name__ == '__main__':
         model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
     elif net_type == 'gcn':
         model = GCN(n_channels=in_channels, n_classes=n_classes)
-    elif net_type == 'gcn2':
-        model = FCN_GCN(n_channels=in_channels, num_classes=n_classes)
     elif net_type == 'b_gcn':
         model = BalancedGCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'unet':
