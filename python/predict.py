@@ -93,10 +93,9 @@ class Inference():
             if type(pred) is list:
                 pred = pred[0]
 
-            t = Variable(torch.Tensor([0.5])).to(self.device)
-            pred_final = torch.where(pred < t, \
-                    torch.zeros(pred.shape).to(self.device), \
-                    torch.ones(pred.shape).to(self.device))
+            pred_max, pred_idx = pred.max(dim=1)
+            pred_final = torch.clamp((pred - pred_max.unsqueeze_(1)) + 0.0001, min=0)*10000
+
             # Evaluate - dice
             dsc = self.criterion(pred_final, gt_mask)
 
