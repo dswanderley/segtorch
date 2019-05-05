@@ -183,7 +183,8 @@ class ASPP_module(nn.Module):
 
 
 class DeepLabv3_plus(nn.Module):
-    def __init__(self, nInputChannels=3, n_classes=21, os=16, pretrained=False, freeze_bn=False, _print=True):
+    def __init__(self, nInputChannels=3, n_classes=21, os=16, softmax_out=True,
+                        pretrained=False, freeze_bn=False,  _print=True):
         if _print:
             print("Constructing DeepLabv3+ model...")
             print("Backbone: Resnet-101")
@@ -235,6 +236,10 @@ class DeepLabv3_plus(nn.Module):
         if freeze_bn:
             self._freeze_bn()
 
+        # Softmax alternative
+        self.has_softmax = softmax_out
+        self.softmax = nn.Softmax2d()
+
 
     def forward(self, input):
         # input (adapt to 3ch input)
@@ -265,6 +270,9 @@ class DeepLabv3_plus(nn.Module):
         x = torch.cat((x, low_level_features), dim=1)
         x = self.last_conv(x)
         x = F.interpolate(x, size=input.size()[2:], mode='bilinear', align_corners=True)
+
+        if self.has_softmax:
+            x = self.softmax(x)
 
         return x
 
