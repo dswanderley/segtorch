@@ -246,15 +246,17 @@ class DeepLabv3_plus(nn.Module):
         x3 = self.aspp3(x)
         x4 = self.aspp4(x)
         x5 = self.global_avg_pool(x)
-        x5 = F.upsample(x5, size=x4.size()[2:], mode='bilinear', align_corners=True)
+        x5 = F.interpolate(x5, size=x4.size()[2:], mode='bilinear', align_corners=True)
 
         x = torch.cat((x1, x2, x3, x4, x5), dim=1)
 
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = F.upsample(x, size=(int(math.ceil(input.size()[-2]/4)),
-                                int(math.ceil(input.size()[-1]/4))), mode='bilinear', align_corners=True)
+        x = F.interpolate(x, mode='bilinear', align_corners=True,
+                      size=(int(math.ceil(input.size()[-2]/4)),
+                            int(math.ceil(input.size()[-1]/4)))
+                    )
 
         low_level_features = self.conv2(low_level_features)
         low_level_features = self.bn2(low_level_features)
@@ -308,9 +310,12 @@ def get_10x_lr_params(model):
 
 
 if __name__ == "__main__":
-    model = DeepLabv3_plus(nInputChannels=1, n_classes=21, os=16, pretrained=True, _print=True)
+    model = DeepLabv3_plus(nInputChannels=1, n_classes=3, os=16, pretrained=True, _print=True)
     model.eval()
-    image = torch.randn(1, 1, 512, 512)
+    image = torch.randn(4, 1, 512, 512)
+    '''
     with torch.no_grad():
         output = model.forward(image)
+    '''
+    output = model(image)
     print(output.size())
