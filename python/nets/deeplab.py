@@ -7,20 +7,18 @@ import torch.utils.model_zoo as model_zoo
 from nets.modules import *
 
 
-BatchNorm2d = nn.BatchNorm2d
-
 class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, dilation=1, downsample=None):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
-        self.bn1 = BatchNorm2d(planes)
+        self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
                                dilation=dilation, padding=dilation, bias=False)
-        self.bn2 = BatchNorm2d(planes)
+        self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
-        self.bn3 = BatchNorm2d(planes * 4)
+        self.bn3 = nn.BatchNorm2d(planes * 4)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
@@ -67,7 +65,7 @@ class ResNet(nn.Module):
         # Modules
         self.conv1 = nn.Conv2d(nInputChannels, 64, kernel_size=7, stride=2, padding=3,
                                 bias=False)
-        self.bn1 = BatchNorm2d(64)
+        self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -87,7 +85,7 @@ class ResNet(nn.Module):
             downsample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes * block.expansion,
                           kernel_size=1, stride=stride, bias=False),
-                BatchNorm2d(planes * block.expansion),
+                nn.BatchNorm2d(planes * block.expansion),
             )
 
         layers = []
@@ -104,7 +102,7 @@ class ResNet(nn.Module):
             downsample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes * block.expansion,
                           kernel_size=1, stride=stride, bias=False),
-                BatchNorm2d(planes * block.expansion),
+                nn.BatchNorm2d(planes * block.expansion),
             )
 
         layers = []
@@ -133,7 +131,7 @@ class ResNet(nn.Module):
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, BatchNorm2d):
+            elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
@@ -163,7 +161,7 @@ class ASPP_module(nn.Module):
             padding = dilation
         self.atrous_convolution = nn.Conv2d(inplanes, planes, kernel_size=kernel_size,
                                             stride=1, padding=padding, dilation=dilation, bias=False)
-        self.bn = BatchNorm2d(planes)
+        self.bn = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU()
 
         self._init_weight()
@@ -179,7 +177,7 @@ class ASPP_module(nn.Module):
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, BatchNorm2d):
+            elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
@@ -217,25 +215,26 @@ class DeepLabv3_plus(nn.Module):
 
         self.global_avg_pool = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)),
                                              nn.Conv2d(2048, 256, 1, stride=1, bias=False),
-                                             BatchNorm2d(256),
+                                             nn.BatchNorm2d(256),
                                              nn.ReLU())
 
         self.conv1 = nn.Conv2d(1280, 256, 1, bias=False)
-        self.bn1 = BatchNorm2d(256)
+        self.bn1 = nn.BatchNorm2d(256)
 
         # adopt [1x1, 48] for channel reduction.
         self.conv2 = nn.Conv2d(256, 48, 1, bias=False)
-        self.bn2 = BatchNorm2d(48)
+        self.bn2 = nn.BatchNorm2d(48)
 
         self.last_conv = nn.Sequential(nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1, bias=False),
-                                       BatchNorm2d(256),
+                                       nn.BatchNorm2d(256),
                                        nn.ReLU(),
                                        nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False),
-                                       BatchNorm2d(256),
+                                       nn.BatchNorm2d(256),
                                        nn.ReLU(),
                                        nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
         if freeze_bn:
             self._freeze_bn()
+
 
     def forward(self, input):
         # input (adapt to 3ch input)
@@ -271,7 +270,7 @@ class DeepLabv3_plus(nn.Module):
 
     def _freeze_bn(self):
         for m in self.modules():
-            if isinstance(m, BatchNorm2d):
+            if isinstance(m, nn.BatchNorm2d):
                 m.eval()
 
     def _init_weight(self):
@@ -279,9 +278,10 @@ class DeepLabv3_plus(nn.Module):
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, BatchNorm2d):
+            elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
+
 
 def get_1x_lr_params(model):
     """
@@ -311,7 +311,8 @@ def get_10x_lr_params(model):
 
 if __name__ == "__main__":
     model = DeepLabv3_plus(nInputChannels=1, n_classes=3, os=16, pretrained=True, _print=True)
-    model.eval()
+    #model.eval()
+    model.train()
     image = torch.randn(4, 1, 512, 512)
     '''
     with torch.no_grad():
