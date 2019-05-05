@@ -16,7 +16,8 @@ class Training:
     """
 
     def __init__(self, model, device, train_set, valid_set, opt, loss,
-                  target='gt_mask', loss_weights=None, train_name='net', logger=None):
+                  target='gt_mask', loss_weights=None, train_name='net', logger=None,
+                  arch='unet'):
         '''
             Training class - Constructor
         '''
@@ -42,7 +43,7 @@ class Training:
                 self.loss_weights = 1.
         else:
             self.loss_weights = 1.
-
+        self.arch = arch
 
     def _saveweights(self, state):
         '''
@@ -216,11 +217,18 @@ class Training:
                 best_loss = avg_loss_val
                 # save
                 self._saveweights({
-                            'epoch': epoch,
-                            'arch': 'unet',
+                            'epoch': epoch + 1,
+                            'arch': self.arch,
+                            'n_input': ref_image_train.shape[0],
+                            'n_classes': ref_pred_train.shape[0],
                             'state_dict': self.model.state_dict(),
+                            'target': self.target,
+                            'loss_function': str(self.criterion),
+                            'loss_weights': self.loss_weights,
                             'best_loss': best_loss,
-                            'optimizer': self.optimizer.state_dict()
+                            'optimizer': str(self.optimizer),
+                            'optimizer_dict': self.optimizer.state_dict(),
+                            'device': str(self.device)
                             })
 
             # ====================== Tensorboard Logging ======================= #

@@ -7,14 +7,17 @@ Created on Wed Mar 03 17:40:00 2019
 @description: Script for network prediction
 """
 
+import os
 import sys
 import csv
+import argparse
 import torch
 import numpy as np
 from PIL import Image
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from nets.unet import Unet2
+from nets.unet import *
+from nets.gcn import *
 from utils.datasets import OvaryDataset
 from utils.losses import DiceCoefficients
 
@@ -33,8 +36,12 @@ class Inference():
         self.weights_path = weights_path
         self._load_network()
         self.criterion = DiceCoefficients()
-        self.pred_folder = folder
-
+        self.pred_folder = folder + 'pred/'
+        if not os.path.exists(self.pred_folder):
+            os.makedirs(self.pred_folder)
+        self.prob_folder = folder + 'prob/'
+        if not os.path.exists(self.prob_folder):
+            os.makedirs(self.prob_folder)
 
     def _load_network(self):
         '''
@@ -72,7 +79,7 @@ class Inference():
         self.model = self.model.to(self.device)
 
         dsc_data = []
-        dsc_data.append(['name', 'backgound', 'stroma', 'follicles'])
+        dsc_data.append(['name', 'backgound', 'stroma', 'follicles', 'ovary'])
 
         data_loader = DataLoader(images, batch_size=1, shuffle=False)
         for _, sample in enumerate(data_loader):
@@ -80,6 +87,8 @@ class Inference():
             image = sample['image'].to(self.device)
             gt_mask = sample['gt_mask'].to(self.device)
             im_name = sample['im_name']
+            # data size
+            bs, n_classes, height, width =  gt_mask.shape
 
             # Handle input
             if len(image.size()) < 4:
@@ -91,50 +100,103 @@ class Inference():
             if type(pred) is list:
                 pred = pred[0]
 
-            t = Variable(torch.Tensor([0.5])).to(self.device)
-            pred_final = torch.where(pred < t, \
-                    torch.zeros(pred.shape).to(self.device), \
-                    torch.ones(pred.shape).to(self.device))
+            pred_max, pred_idx = pred.max(dim=1)
+            pred_final = torch.clamp((pred - pred_max.unsqueeze_(1)) + 0.0001, min=0)*10000
+
             # Evaluate - dice
             dsc = self.criterion(pred_final, gt_mask)
 
+            # ovary prediction (interim)
+            ov_mask = sample['ovary_mask'].to(self.device)  # load mask
+            pred_ovary = torch.zeros(1,2, height, width).to(self.device)
+            pred_ovary[:,0,...] = pred_final[:,0,...]
+            pred_ovary[:,1,...] = pred_final[:,1,...] + pred_final[:,2,...]
+            dsc_ov = self.criterion(pred_ovary, ov_mask)
+
             # Display evaluation
             iname = im_name[0]
-            dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item()])
+            dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item(), dsc_ov[1]])
 
-            print(iname)
-            print('Stroma DSC:    {:f}'.format(dsc[1]))
-            print('Follicle DSC:  {:f}'.format(dsc[2]))
+            print('Filename:     {:s}'.format(iname))
+            print('Stroma DSC:   {:f}'.format(dsc[1]))
+            print('Follicle DSC: {:f}'.format(dsc[2]))
+            print('Ovary DSC:    {:f}'.format(dsc_ov[1]))
             print('')
             # Save prediction
             img_out = pred_final[0].detach().cpu().permute(1,2,0).numpy()
             Image.fromarray((255*img_out).astype(np.uint8)).save(self.pred_folder + iname)
+            # Save probabilities
+            img_prob = pred[0].detach().cpu().permute(1,2,0).numpy()
+            Image.fromarray((255*img_prob).astype(np.uint8)).save(self.prob_folder + iname)
 
         self._save_data(dsc_data)
+
 
 
 # Main calls
 if __name__ == '__main__':
 
-    # Model name
-    train_name = '20190322_1721_Unet2'
+    # Load inputs
+    parser = argparse.ArgumentParser(description="PyTorch segmentation network predictions (only ovarian dataset).")
+    parser.add_argument('--net', type=str, default='unet2',
+                        choices=['can', 'deeplab_v3+', 'unet', 'unet_light', 'unet2', 'd_unet2', 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
+                        help='network name (default: unet2)')
+    parser.add_argument('--train_name', type=str, default='20190428_1133_unet2',
+                        help='training name (default: 20190428_1133_unet2)')
+    parser.add_argument('--folder_weigths', type=str, default='../weights/',
+                        help='Weights root folder (default: ../weights/)')
+    parser.add_argument('--folder_preds', type=str, default='../predictions/',
+                        help='Predctions root folder (default: ../predictions/)')
 
-    if(len(sys.argv)>1):
-        train_name = sys.argv[1]
-    print('train name:', train_name)
+    # Parse input data
+    args = parser.parse_args()
 
-    # Load Unet
-    model = Unet2(n_channels=1, n_classes=3)
+    # Input parameters
+    train_name = args.train_name
+    net_type = args.net
+    folder_weights = args.folder_weigths
+    folder_preds = args.folder_preds
+
+    # Define input and output
+    in_channels=1
+    n_classes=3
+
+    bilinear = False
+     # Load Network model
+    if net_type == 'can':
+        model = CAN(in_channels, n_classes)
+    elif net_type == 'deeplab_v3+':
+        model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
+    elif net_type == 'gcn':
+        model = GCN(n_channels=in_channels, n_classes=n_classes)
+    elif net_type == 'gcn2':
+        model = FCN_GCN(n_channels=in_channels, num_classes=n_classes)
+    elif net_type == 'b_gcn':
+        model = BalancedGCN(n_channels=in_channels, n_classes=n_classes)
+    elif net_type == 'unet':
+        model = Unet(n_channels=in_channels, n_classes=n_classes)
+    elif net_type == 'unet_light':
+            model = UnetLight(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
+    elif net_type == 'd_unet':
+        model = DilatedUnet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
+    else:
+        model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
 
     # Load CUDA if exist
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Dataset definitions
-    dataset_test = OvaryDataset(im_dir='../dataset/im/test/', gt_dir='../dataset/gt/test/')
+    dataset_test = OvaryDataset(im_dir='../datasets/ovarian/im/test/', gt_dir='../datasets/ovarian/gt/test/')
 
     # Test network model
     print('Testing')
     print('')
-    weights_path = '../weights/' + train_name + '_weights.pth.tar'
-    inference = Inference(model, device, weights_path)
+    weights_path = folder_weights + train_name + '_weights.pth.tar'
+    # Output folder
+    out_folder = folder_preds + train_name + '/'
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder)
+    # Load inference
+    inference = Inference(model, device, weights_path, folder=out_folder)
+    # Run inference
     inference.predict(dataset_test)

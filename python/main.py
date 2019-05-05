@@ -24,7 +24,6 @@ from nets.deeplab import DeepLabv3_plus
 from nets.unet import *
 from nets.dilation import *
 from nets.gcn import *
-from nets.gcn2 import *
 from utils.datasets import OvaryDataset, VOC2012Dataset
 from utils.losses import *
 from train import Training
@@ -132,28 +131,25 @@ if __name__ == '__main__':
         in_channels += 1
         network_name = 'i' + network_name
 
-    print(network_name)
-    print('dataset:', dataset_name)
-    print('output classes:', n_classes)
-    print('epochs:', n_epochs)
-    print('batch size:', batch_size)
-    print('optmization:', opt)
-    print('loss funcion:', loss)
-    print('---------------------------')
-    print('')
-
+    print('--- Network Parameters ---')
+    print('network name:   {:s}'.format(network_name))
+    print('dataset:        {:s}'.format(dataset_name))
+    print('output classes: {:d}'.format(n_classes))
+    print('epochs:         {:d}'.format(n_epochs))
+    print('batch size:     {:d}'.format(batch_size))
+    print('optmization:    {:s}'.format(opt))
+    print('loss funcion:   {:s}'.format(loss))
+    
     # Define training name
     train_name = gettrainname(network_name)
 
     # Load Network model
     if net_type == 'can':
         model = CAN(in_channels, n_classes)
-    elif net_type == 'deeplab_v3':
+    elif net_type == 'deeplab_v3+':
         model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
     elif net_type == 'gcn':
         model = GCN(n_channels=in_channels, n_classes=n_classes)
-    elif net_type == 'gcn2':
-        model = FCN_GCN(n_channels=in_channels, num_classes=n_classes)
     elif net_type == 'b_gcn':
         model = BalancedGCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'unet':
@@ -164,7 +160,10 @@ if __name__ == '__main__':
         model = DilatedUnet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     else:
         model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
-    #print(net)
+    
+    print('model class:   {:s}'.format(type(model)))
+    print('--------------------------')
+    print('')
 
     # Load CUDA if exist
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -219,7 +218,7 @@ if __name__ == '__main__':
     # Run training
     training = Training(model, device, dataset_train, dataset_val,
                         optmizer, loss_function, target=target,
-                        logger=logger, train_name=train_name)
+                        logger=logger, train_name=train_name, arch=net_type)
     training.train(epochs=n_epochs, batch_size=batch_size)
     print('------------- END OF TRAINING -------------')
     print(' ')
@@ -228,5 +227,10 @@ if __name__ == '__main__':
     print('Testing')
     print('')
     weights_path = '../weights/' + train_name + '_weights.pth.tar'
-    inference = Inference(model, device, weights_path)
+    # Output folder
+    out_folder = '../predictions/' + train_name + '/'
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder)
+    # Load inference
+    inference = Inference(model, device, weights_path, folder=out_folder)
     inference.predict(dataset_test)
