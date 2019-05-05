@@ -139,7 +139,7 @@ if __name__ == '__main__':
     print('batch size:     {:d}'.format(batch_size))
     print('optmization:    {:s}'.format(opt))
     print('loss funcion:   {:s}'.format(loss))
-    
+
     # Define training name
     train_name = gettrainname(network_name)
 
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     if net_type == 'can':
         model = CAN(in_channels, n_classes)
     elif net_type == 'deeplab_v3+':
-        model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
+        model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes, os=16, pretrained=True)
     elif net_type == 'gcn':
         model = GCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'b_gcn':
@@ -155,13 +155,13 @@ if __name__ == '__main__':
     elif net_type == 'unet':
         model = Unet(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'unet_light':
-            model = UnetLight(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
+        model = UnetLight(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     elif net_type == 'd_unet':
         model = DilatedUnet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     else:
         model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
-    
-    print('model class:   {:s}'.format(type(model)))
+
+    print('model class:   {:s}'.format(str(type(model))))
     print('--------------------------')
     print('')
 
