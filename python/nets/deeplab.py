@@ -183,8 +183,8 @@ class ASPP_module(nn.Module):
 
 
 class DeepLabv3_plus(nn.Module):
-    def __init__(self, nInputChannels=3, n_classes=21, os=16, softmax_out=True,
-                        pretrained=False, freeze_bn=False,  _print=True):
+    def __init__(self, nInputChannels=3, n_classes=21, os=16, softmax_out=True, dropout=0.2,
+                        pretrained=False, freeze_bn=False, _print=True):
         if _print:
             print("Constructing DeepLabv3+ model...")
             print("Backbone: Resnet-101")
@@ -226,13 +226,21 @@ class DeepLabv3_plus(nn.Module):
         self.conv2 = nn.Conv2d(256, 48, 1, bias=False)
         self.bn2 = nn.BatchNorm2d(48)
 
-        self.last_conv = nn.Sequential(nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1, bias=False),
-                                       nn.BatchNorm2d(256),
-                                       nn.ReLU(),
-                                       nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False),
-                                       nn.BatchNorm2d(256),
-                                       nn.ReLU(),
-                                       nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
+        # Final conv block
+        self.last_conv = nn.Sequential()
+        self.last_conv.add_module('conv2d_1', nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1, bias=False))
+        self.last_conv.add_module('bnorm_1', nn.BatchNorm2d(256))
+        self.last_conv.add_module('relu_1', nn.ReLU())
+        if dropout > 0:
+            self.last_conv.add_module('dropout_1', nn.Dropout2d(dropout))
+        self.last_conv.add_module('conv2d_2', nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False))
+        self.last_conv.add_module('bnorm_2', nn.BatchNorm2d(256))
+        self.last_conv.add_module('relu_2', nn.ReLU())
+        if dropout > 0:
+            self.last_conv.add_module('dropout_2', nn.Dropout2d(dropout))
+        self.last_conv.add_module('conv2d_3', nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
+
+        # Freeze Batch Norm
         if freeze_bn:
             self._freeze_bn()
 
@@ -266,7 +274,6 @@ class DeepLabv3_plus(nn.Module):
         low_level_features = self.bn2(low_level_features)
         low_level_features = self.relu(low_level_features)
 
-
         x = torch.cat((x, low_level_features), dim=1)
         x = self.last_conv(x)
         x = F.interpolate(x, size=input.size()[2:], mode='bilinear', align_corners=True)
@@ -275,6 +282,7 @@ class DeepLabv3_plus(nn.Module):
             x = self.softmax(x)
 
         return x
+
 
     def _freeze_bn(self):
         for m in self.modules():
