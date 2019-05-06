@@ -16,6 +16,7 @@ import numpy as np
 from PIL import Image
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from nets.deeplab import DeepLabv3_plus
 from nets.unet import *
 from nets.gcn import *
 from utils.datasets import OvaryDataset
