@@ -228,17 +228,17 @@ class DeepLabv3_plus(nn.Module):
 
         # Final conv block
         self.last_conv = nn.Sequential()
-        self.last_conv.add_module('conv2d_1', nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1, bias=False))
-        self.last_conv.add_module('bnorm_1', nn.BatchNorm2d(256))
-        self.last_conv.add_module('relu_1', nn.ReLU())
+        self.last_conv.add_module('0', nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1, bias=False))
+        self.last_conv.add_module('1', nn.BatchNorm2d(256))
+        self.last_conv.add_module('2', nn.ReLU())
         if dropout > 0:
             self.last_conv.add_module('dropout_1', nn.Dropout2d(dropout))
-        self.last_conv.add_module('conv2d_2', nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False))
-        self.last_conv.add_module('bnorm_2', nn.BatchNorm2d(256))
-        self.last_conv.add_module('relu_2', nn.ReLU())
+        self.last_conv.add_module('3', nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False))
+        self.last_conv.add_module('4', nn.BatchNorm2d(256))
+        self.last_conv.add_module('5', nn.ReLU())
         if dropout > 0:
             self.last_conv.add_module('dropout_2', nn.Dropout2d(dropout))
-        self.last_conv.add_module('conv2d_3', nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
+        self.last_conv.add_module('6', nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
 
         # Freeze Batch Norm
         if freeze_bn:

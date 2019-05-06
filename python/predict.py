@@ -168,8 +168,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Input parameters
-    train_name = args.train_name
-    net_type = args.net
+    train_name = '20190506_1145_deeplab_v3+'#args.train_name
+    net_type = 'deeplab_v3+'#args.net
     batch_size = args.batch_size
     folder_weights = args.folder_weigths
     folder_preds = args.folder_preds
@@ -183,7 +183,7 @@ if __name__ == '__main__':
     if net_type == 'can':
         model = CAN(in_channels, n_classes)
     elif net_type == 'deeplab_v3+':
-        model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes)
+        model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes, os=16)
     elif net_type == 'gcn':
         model = GCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'gcn2':
