@@ -27,13 +27,14 @@ class Inference():
         Inferecen class
     """
 
-    def __init__(self, model, device, weights_path, folder='../predictions/'):
+    def __init__(self, model, device, weights_path, batch_size=1, folder='../predictions/'):
         '''
             Inference class - Constructor
         '''
         self.model = model
         self.device = device
         self.weights_path = weights_path
+        self.batch_size = batch_size
         self._load_network()
         self.criterion = DiceCoefficients()
         self.pred_folder = folder + 'pred/'
@@ -42,6 +43,7 @@ class Inference():
         self.prob_folder = folder + 'prob/'
         if not os.path.exists(self.prob_folder):
             os.makedirs(self.prob_folder)
+
 
     def _load_network(self):
         '''
@@ -81,12 +83,14 @@ class Inference():
         dsc_data = []
         dsc_data.append(['name', 'backgound', 'stroma', 'follicles', 'ovary'])
 
-        data_loader = DataLoader(images, batch_size=1, shuffle=False)
+        data_loader = DataLoader(images, batch_size=self.batch_size, shuffle=False)
         for _, sample in enumerate(data_loader):
             # Load data
             image = sample['image'].to(self.device)
             gt_mask = sample['gt_mask'].to(self.device)
             im_name = sample['im_name']
+            # ovary prediction (interim)
+            ov_mask = sample['ovary_mask'].to(self.device)  # load mask
             # data size
             bs, n_classes, height, width =  gt_mask.shape
 
@@ -103,31 +107,40 @@ class Inference():
             pred_max, pred_idx = pred.max(dim=1)
             pred_final = torch.clamp((pred - pred_max.unsqueeze_(1)) + 0.0001, min=0)*10000
 
-            # Evaluate - dice
-            dsc = self.criterion(pred_final, gt_mask)
+            # Compute Dice image by image
+            for i in range(bs):
+                
+                # Get unique prediction
+                pred_un = pred_final[i,...]
+                pred_un.unsqueeze_(0)
+                # Get unique GT
+                gt_un = gt_mask[i,...]
+                gt_un.unsqueeze_(0)
+                ov_mask_un = ov_mask[i,...]
+                ov_mask_un.unsqueeze_(0)
 
-            # ovary prediction (interim)
-            ov_mask = sample['ovary_mask'].to(self.device)  # load mask
-            pred_ovary = torch.zeros(1,2, height, width).to(self.device)
-            pred_ovary[:,0,...] = pred_final[:,0,...]
-            pred_ovary[:,1,...] = pred_final[:,1,...] + pred_final[:,2,...]
-            dsc_ov = self.criterion(pred_ovary, ov_mask)
+                # Evaluate - dice
+                dsc = self.criterion(pred_un, gt_un)                
+                pred_ovary = torch.zeros(1, 2, height, width).to(self.device)
+                pred_ovary[:,0,...] = pred_un[:,0,...]
+                pred_ovary[:,1,...] = pred_un[:,1,...] + pred_un[:,2,...]
+                dsc_ov = self.criterion(pred_ovary, ov_mask_un)
 
-            # Display evaluation
-            iname = im_name[0]
-            dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item(), dsc_ov[1]])
+                # Display evaluation
+                iname = im_name[i]
+                dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item(), dsc_ov[1]])
 
-            print('Filename:     {:s}'.format(iname))
-            print('Stroma DSC:   {:f}'.format(dsc[1]))
-            print('Follicle DSC: {:f}'.format(dsc[2]))
-            print('Ovary DSC:    {:f}'.format(dsc_ov[1]))
-            print('')
-            # Save prediction
-            img_out = pred_final[0].detach().cpu().permute(1,2,0).numpy()
-            Image.fromarray((255*img_out).astype(np.uint8)).save(self.pred_folder + iname)
-            # Save probabilities
-            img_prob = pred[0].detach().cpu().permute(1,2,0).numpy()
-            Image.fromarray((255*img_prob).astype(np.uint8)).save(self.prob_folder + iname)
+                print('Filename:     {:s}'.format(iname))
+                print('Stroma DSC:   {:f}'.format(dsc[1]))
+                print('Follicle DSC: {:f}'.format(dsc[2]))
+                print('Ovary DSC:    {:f}'.format(dsc_ov[1]))
+                print('')
+                # Save prediction
+                img_out = pred_final[i].detach().cpu().permute(1,2,0).numpy()
+                Image.fromarray((255*img_out).astype(np.uint8)).save(self.pred_folder + iname)
+                # Save probabilities
+                img_prob = pred[i].detach().cpu().permute(1,2,0).numpy()
+                Image.fromarray((255*img_prob).astype(np.uint8)).save(self.prob_folder + iname)
 
         self._save_data(dsc_data)
 
@@ -143,6 +156,8 @@ if __name__ == '__main__':
                         help='network name (default: unet2)')
     parser.add_argument('--train_name', type=str, default='20190428_1133_unet2',
                         help='training name (default: 20190428_1133_unet2)')
+    parser.add_argument('--batch_size', type=int, default=1,
+                        help='batch size (default: 1)')
     parser.add_argument('--folder_weigths', type=str, default='../weights/',
                         help='Weights root folder (default: ../weights/)')
     parser.add_argument('--folder_preds', type=str, default='../predictions/',
@@ -154,6 +169,7 @@ if __name__ == '__main__':
     # Input parameters
     train_name = args.train_name
     net_type = args.net
+    batch_size = args.batch_size
     folder_weights = args.folder_weigths
     folder_preds = args.folder_preds
 
@@ -197,6 +213,6 @@ if __name__ == '__main__':
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
     # Load inference
-    inference = Inference(model, device, weights_path, folder=out_folder)
+    inference = Inference(model, device, weights_path, batch_size=batch_size, folder=out_folder)
     # Run inference
     inference.predict(dataset_test)
