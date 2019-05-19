@@ -269,6 +269,39 @@ class OutConv(nn.Module):
         return x
 
 
+class GlobalAvgPool(nn.Module):
+    '''
+    Atrous or dilated convolution layer
+    '''
+    def __init__(self, in_ch, out_ch, batch_norm=True, dropout=0):
+        ''' Constructor '''
+        super(GlobalAvgPool, self).__init__()
+        # parameters
+        self.in_ch = in_ch
+        self.out_ch = out_ch
+        self.batch_norm = batch_norm
+        self.dropout = dropout
+        # Set sequential module
+        self.conv = nn.Sequential()
+        # pooling stencil size
+        self.conv.add_module("avg_pool", nn.AdaptiveAvgPool2d((1, 1)))
+        # 1x1 Convoltion (depth-weighted average)
+        self.conv.add_module("conv", nn.Conv2d(in_ch, out_ch, kernel_size=1, bias=False))
+        # Batch norm
+        if batch_norm:
+            self.conv.add_module("bnorm", nn.BatchNorm2d(out_ch))
+        # dropout if necessary
+        if dropout > 0:
+            self.conv.add_module("dropout", nn.Dropout2d(dropout))
+        # relu
+        self.conv.add_module("relu", nn.ReLU(inplace=True))
+
+    def forward(self, x):
+        ''' Foward method '''
+        x = self.conv(x)
+        return x
+
+
 class AtrousConv(nn.Module):
     '''
     Atrous or dilated convolution layer
@@ -284,39 +317,12 @@ class AtrousConv(nn.Module):
         self.padding = padding
         # Set conv layer
         self.conv = nn.Sequential()
-        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size=kernel_size, stride=1, dilation=dilation, padding=padding, bias=False))
+        self.conv.add_module("conv", nn.Conv2d(in_ch, out_ch, kernel_size=kernel_size, stride=1, dilation=dilation, padding=padding, bias=False))
         if batch_norm:
-            self.conv.add_module("bnorm_1",nn.BatchNorm2d(out_ch))
+            self.conv.add_module("bnorm",nn.BatchNorm2d(out_ch))
         if dropout > 0:
-            self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
-        self.conv.add_module("relu_1",nn.ReLU(inplace=True))
-
-    def forward(self, x):
-        ''' Foward method '''
-        x = self.conv(x)
-        return x
-
-
-class GlobalAvgPool(nn.Module):
-    '''
-    Atrous or dilated convolution layer
-    '''
-    def __init__(self, in_ch, out_ch, batch_norm=True, dropout=0):
-        ''' Constructor '''
-        super(GlobalAvgPool, self).__init__()
-        # parameters
-        self.in_ch = in_ch
-        self.out_ch = out_ch
-        self.batch_norm = batch_norm
-        self.dropout = dropout
-        # Set conv layer
-        self.conv = nn.Sequential()
-        self.conv.add_module("avg_pool", nn.AdaptiveAvgPool2d((1, 1)))
-        self.conv.add_module("conv_1", nn.Conv2d(in_ch, out_ch, kernel_size=1, bias=False))
-        if batch_norm:
-            self.conv.add_module("bnorm_1", nn.BatchNorm2d(out_ch))
-        if dropout > 0:
-            self.conv.add_module("dropout_1", nn.Dropout2d(dropout))
+            self.conv.add_module("dropout", nn.Dropout2d(dropout))
+        self.conv.add_module("relu", nn.ReLU(inplace=True))
 
     def forward(self, x):
         ''' Foward method '''
@@ -325,24 +331,47 @@ class GlobalAvgPool(nn.Module):
 
 
 class ASPP(nn.Module):
-    def __init__(self, inplanes, planes, dilation):
+    '''
+    Atrous Spatial Pyramid Pooling
+    '''
+    def __init__(self, in_ch, out_ch, dilations):
         super(ASPP, self).__init__()
-        if dilation == 1:
-            kernel_size = 1
-            padding = 0
-        else:
-            kernel_size = 3
-            padding = dilation
-        self.atrous_convolution = nn.Conv2d(inplanes, planes, kernel_size=kernel_size,
-                                            stride=1, padding=padding, dilation=dilation, bias=False)
-        self.bn = BatchNorm2d(planes)
-        self.relu = nn.ReLU()
-
-        self._init_weight()
+        # Properties
+        self.dilations = dilations
+        self.in_ch = in_ch
+        self.out_ch = out_ch
+        # List of atrous convolution
+        self.atrous_list = []
+        # Set each dilated convolution
+        for i in range(len(dilations)):
+            d = dilations[i]
+            if dilation == 1:
+                ks = 1
+                pad = 0
+            else:
+                kernel_size = 3
+                pad = d
+            # Sequential atrous convolution
+            self.atrous_list.append(nn.AtrousConv(in_ch, out_ch,
+                                    kernel_size=ks, dilation=d, padding=pad))
+        # Image Pooling
+        self.im_pooling = GlobalAvgPool(in_ch, out_ch)
 
     def forward(self, x):
-        x = self.atrous_convolution(x)
-        x = self.bn(x)
+        # Set list to be concatenated
+        y = []
+        for i in range(len(self.dilations)):
+            # Compute each dilated convolution
+            conv = self.atrous_list[i]
+            y.append(conv(x))
+        # Image pooling
+        x_pool = self.im_pooling(x)
+        # Upsampling image average
+        y.append(F.interpolate(x_pool, size=x.size()[2:], mode='bilinear', align_corners=True))
+        # Concat volumes
+        x_cat = torch.cat(y, dim=1)
+        # Return concatenated volume
+        return x_cat
 
 
 class GlobalConv(nn.Module):
