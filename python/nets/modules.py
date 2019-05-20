@@ -273,33 +273,36 @@ class GlobalAvgPool(nn.Module):
     '''
     Atrous or dilated convolution layer
     '''
-    def __init__(self, in_ch, out_ch, batch_norm=True, dropout=0):
+    def __init__(self, in_ch, out_ch, batch_norm=True):
         ''' Constructor '''
         super(GlobalAvgPool, self).__init__()
         # parameters
         self.in_ch = in_ch
         self.out_ch = out_ch
         self.batch_norm = batch_norm
-        self.dropout = dropout
         # Set sequential module
         self.conv = nn.Sequential()
         # pooling stencil size
         self.conv.add_module("avg_pool", nn.AdaptiveAvgPool2d((1, 1)))
         # 1x1 Convoltion (depth-weighted average)
-        self.conv.add_module("conv", nn.Conv2d(in_ch, out_ch, kernel_size=1, bias=False))
+        self.conv.add_module("conv", nn.Conv2d(in_ch, out_ch, 1, stride=1, bias=False))
         # Batch norm
         if batch_norm:
             self.conv.add_module("bnorm", nn.BatchNorm2d(out_ch))
-        # dropout if necessary
-        if dropout > 0:
-            self.conv.add_module("dropout", nn.Dropout2d(dropout))
         # relu
         self.conv.add_module("relu", nn.ReLU(inplace=True))
 
     def forward(self, x):
         ''' Foward method '''
+        bs = x.shape[0] 
+        if x.shape[0] == 1:
+            x = torch.cat((x, x), dim=0)
         x = self.conv(x)
-        return x
+
+        if bs > 1:
+            return x
+        else:
+            return x[0].unsqueeze_(0)
 
 
 class AtrousConv(nn.Module):
@@ -345,15 +348,17 @@ class ASPP(nn.Module):
         # Set each dilated convolution
         for i in range(len(dilations)):
             d = dilations[i]
-            if dilation == 1:
+            if d == 1:
                 ks = 1
                 pad = 0
             else:
-                kernel_size = 3
+                ks = 3
                 pad = d
             # Sequential atrous convolution
-            self.atrous_list.append(nn.AtrousConv(in_ch, out_ch,
-                                    kernel_size=ks, dilation=d, padding=pad))
+            self.atrous_list.append(
+                AtrousConv(in_ch, out_ch,
+                            kernel_size=ks, dilation=d, padding=pad)
+            )
         # Image Pooling
         self.im_pooling = GlobalAvgPool(in_ch, out_ch)
 
@@ -526,8 +531,9 @@ class BrConv(nn.Module):
 # Main calls
 if __name__ == '__main__':
 
-    block = ConvSequence(1,[8,8],2, kernel_size=[3,3])
+    dilations = [1, 6, 12, 18]
+    aspp_block = ASPP(2048, 256, dilations=dilations)
     #print(block)
-    x = torch.rand(1,1,512,512)
-    y=block(x)
+    x = torch.rand(2,2048,32,32)
+    y = aspp_block(x)
     print(y)

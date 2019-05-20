@@ -6,3 +6,4 @@ logs/
 *.csv
 *.jpg
 python/.vscode/settings.json
+*.pth
