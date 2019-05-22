@@ -343,6 +343,98 @@ class DilatedUnet2(nn.Module):
         return x_out
 
 
+class SpatialPyramidUnet(nn.Module):
+    '''
+    Dilated U-net (light) class usint Spatial Pyramid Pooling from end-to-end segmentation
+    '''
+    def __init__(self, n_channels, n_classes, bilinear=False, dropout=[0,0.2]):
+        ''' Constructor '''
+        super(SpatialPyramidUnet, self).__init__()
+
+        # Load unet 2 model
+        u_body = UnetLight(n_channels, n_classes, bilinear=bilinear, dropout=dropout)
+        # Number of classes definition
+        self.n_classes = n_classes
+        self.n_input = n_channels
+        self.bilinear = bilinear
+        self.dp_down = u_body.dp_down
+        self.dp_up =  u_body.dp_up
+
+        self.blocks = [1*2, 2*2, 4*2]
+        self.dilations = [1, 6, 12, 18]
+
+        # Set input layer
+        self.conv_init  = u_body.conv_init  # 512 x 8
+        # Set downconvolution layer 1
+        self.conv_down1 = u_body.conv_down2 # 256 x 16
+        # Set downconvolution layer 2
+        self.conv_down2 = u_body.conv_down3 # 128 x 24
+        # Set downconvolution layer 3
+        self.conv_down3 = u_body.conv_down4 # 64 x 32
+        # Set downconvolution layer 4
+        self.conv_down4 = u_body.conv_down5 # 32 x 40
+
+        # Dilatation
+        self.conv_bottom = ConvSequence(40, 48, len(self.blocks),
+                            kernel_size=3, stride=1,
+                            padding=self.blocks, 
+                            dilatation=self.blocks,
+                            batch_norm=True, dropout=0)
+        # Spatial Pyramid Pooling
+        self.aspp_block = ASPP(48, 40, dilations=self.dilations)
+
+        # Set upconvolution layer 1
+        self.conv_up1 = UpConv(40, 384, res_ch=32, dropout=self.dp_up, bilinear=bilinear)  # 64
+        # Set upconvolution layer 2
+        self.conv_up2 = UpConv(384, 192, res_ch=24, dropout=self.dp_up, bilinear=bilinear) # 128
+        # Set upconvolution layer 3
+        self.conv_up3 = UpConv(192, 96, res_ch=16, dropout=self.dp_up, bilinear=bilinear)  # 256
+        # Set upconvolution layer 4
+        self.conv_up4 = UpConv(96, 64, res_ch=8, dropout=self.dp_up, bilinear=bilinear)    # 512
+
+       # Set output layer
+        if type(n_classes) is list:
+            self.conv_out = nn.ModuleList() # necessary for GPU convertion
+            for n in n_classes:
+                c_out = OutConv(64, n)
+                self.conv_out.append(c_out)
+        else:
+            self.conv_out = OutConv(64, n_classes)
+        # Define Softmax
+        self.softmax = nn.Softmax2d()
+
+
+    def forward(self, x):
+        ''' Foward method '''
+        # input
+        c_x1 = self.conv_init(x)
+        # downstream
+        dc_x1 = self.conv_down1(c_x1)
+        dc_x2 = self.conv_down2(dc_x1)
+        dc_x3 = self.conv_down3(dc_x2)
+        dc_x4 = self.conv_down4(dc_x3)
+        # dilation
+        ac_x1 = self.conv_bottom(dc_x4)
+        ac_x2 = self.aspp_block(ac_x1)
+        # upstream
+        uc_x1 = self.conv_up1(ac_x2, dc_x3)
+        uc_x2 = self.conv_up2(uc_x1, dc_x2)
+        uc_x3 = self.conv_up3(uc_x2, dc_x1)
+        uc_x4 = self.conv_up4(uc_x3, c_x1)
+        # output
+        if type(self.n_classes) is list:
+            x_out = []
+            for c_out in self.conv_out:
+                x_5 = c_out(uc_x4)
+                x_out.append(self.softmax(x_5))
+        else:
+            x_5 = self.conv_out(uc_x4)
+            x_out = self.softmax(x_5)
+
+        return x_out
+
+
+
 class InstSegNet(nn.Module):
 
     def __init__(self, n_channels, n_features):
@@ -371,7 +463,7 @@ class InstSegNet(nn.Module):
 if __name__ == '__main__':
 
     x = torch.rand(1,1,512,512)
-    net = UnetLight(1,3)
+    net = SpatialPyramidUnet(1,3)
 
     y = net(x)
     print(y)

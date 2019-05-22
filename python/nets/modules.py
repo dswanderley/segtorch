@@ -144,7 +144,7 @@ class ConvSequence(nn.Module):
     '''
     Enconding layer (conv + conv)
     '''
-    def __init__(self, in_ch, out_ch, n_vols, kernel_size=3, padding=1, stride=1, batch_norm=True, dropout=0):
+    def __init__(self, in_ch, out_ch, n_vols, kernel_size=3, padding=1, stride=1, dilatation=1, batch_norm=True, dropout=0):
         ''' Constructor '''
         super(ConvSequence, self).__init__()
         # Properties
@@ -178,6 +178,11 @@ class ConvSequence(nn.Module):
             self.stride = stride
         else:
             self.stride = [stride] * n_vols
+        # dilatation
+        if type(dilatation) == list or type(dilatation) == tuple:
+            self.dilatation = dilatation
+        else:
+            self.dilatation = [dilatation] * n_vols
 
         # Conv blocks
         self.conv = nn.Sequential()
@@ -189,9 +194,10 @@ class ConvSequence(nn.Module):
             bnorm = self.batch_norm[i]
             ksize = self.kernel_size[i]
             zpad = self.padding[i]
+            d_rate = self.dilatation[i]
             # Add Convolution
             self.conv.add_module("conv_" + idx,
-                                nn.Conv2d(ich, och, ksize, stride=std, padding=zpad)
+                                nn.Conv2d(ich, och, ksize, stride=std, padding=zpad, dilation=d_rate)
                                 )
             # Add Batch Normalization
             if bnorm:
@@ -361,6 +367,12 @@ class ASPP(nn.Module):
             )
         # Image Pooling
         self.im_pooling = GlobalAvgPool(in_ch, out_ch)
+        # Volume reductuion
+        self.conv1 = nn.Sequential()
+        self.conv1.add_module('conv', nn.Conv2d(out_ch*(len(dilations)+1), out_ch, 1, bias=False))
+        self.conv1.add_module('bnorm', nn.BatchNorm2d(out_ch))
+        self.conv1.add_module('relu',  nn.ReLU())
+
 
     def forward(self, x):
         # Set list to be concatenated
@@ -375,8 +387,10 @@ class ASPP(nn.Module):
         y.append(F.interpolate(x_pool, size=x.size()[2:], mode='bilinear', align_corners=True))
         # Concat volumes
         x_cat = torch.cat(y, dim=1)
-        # Return concatenated volume
-        return x_cat
+        # volumer reduction
+        x_out = self.conv1(x_cat)
+        
+        return x_out
 
 
 class GlobalConv(nn.Module):
