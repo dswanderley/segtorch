@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PyTorch segmentation network training and prediction.")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['can', 'deeplab_v3+', 'unet', 'unet_light', 'unet2', 'd_unet2', 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
+                        choices=['can', 'deeplab_v3+', 'unet', 'unet_light', 'unet2', 'd_unet2', 'sp_unet', 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs (default: 1)')
@@ -156,6 +156,8 @@ if __name__ == '__main__':
         model = Unet(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'unet_light':
         model = UnetLight(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
+    elif net_type == 'sp_unet':
+        model = SpatialPyramidUnet(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     elif net_type == 'd_unet':
         model = DilatedUnet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     else:
