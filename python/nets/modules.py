@@ -361,7 +361,7 @@ class ASPP(nn.Module):
                 ks = 3
                 pad = d
             # Sequential atrous convolution
-            self.atrous_list.append(
+            atrous_list.append(
                 AtrousConv(in_ch, out_ch,
                             kernel_size=ks, dilation=d, padding=pad)
             )
