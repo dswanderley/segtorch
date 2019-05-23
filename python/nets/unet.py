@@ -434,7 +434,6 @@ class SpatialPyramidUnet(nn.Module):
         return x_out
 
 
-
 class InstSegNet(nn.Module):
 
     def __init__(self, n_channels, n_features):

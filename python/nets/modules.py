@@ -343,14 +343,14 @@ class ASPP(nn.Module):
     '''
     Atrous Spatial Pyramid Pooling
     '''
-    def __init__(self, in_ch, out_ch, dilations):
+    def __init__(self, in_ch, out_ch, dilations=[1, 6, 12, 18]):
         super(ASPP, self).__init__()
         # Properties
         self.dilations = dilations
         self.in_ch = in_ch
         self.out_ch = out_ch
         # List of atrous convolution
-        self.atrous_list = []
+        atrous_list = []
         # Set each dilated convolution
         for i in range(len(dilations)):
             d = dilations[i]
@@ -365,6 +365,11 @@ class ASPP(nn.Module):
                 AtrousConv(in_ch, out_ch,
                             kernel_size=ks, dilation=d, padding=pad)
             )
+        # Altrous conv blocks
+        self.aconv1 = atrous_list[0]
+        self.aconv2 = atrous_list[1]
+        self.aconv3 = atrous_list[2]
+        self.aconv4 = atrous_list[3]
         # Image Pooling
         self.im_pooling = GlobalAvgPool(in_ch, out_ch)
         # Volume reductuion
@@ -375,12 +380,13 @@ class ASPP(nn.Module):
 
 
     def forward(self, x):
-        # Set list to be concatenated
-        y = []
-        for i in range(len(self.dilations)):
-            # Compute each dilated convolution
-            conv = self.atrous_list[i]
-            y.append(conv(x))
+        # Compute each dilated convolution
+        y = [
+            self.aconv1(x),
+            self.aconv2(x),
+            self.aconv3(x),
+            self.aconv4(x)
+        ]
         # Image pooling
         x_pool = self.im_pooling(x)
         # Upsampling image average
