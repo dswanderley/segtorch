@@ -100,7 +100,9 @@ class Inference():
                 image.unsqueeze_(1) # add a dimension to the tensor
 
             # Prediction
-            pred = self.model(image)
+            pred = None
+            with torch.no_grad():
+                pred = self.model(image)
             # Handle multiples outputs
             if type(pred) is list:
                 pred = pred[0]
@@ -129,7 +131,7 @@ class Inference():
 
                 # Display evaluation
                 iname = im_name[i]
-                dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item(), dsc_ov[1]])
+                dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item(), dsc_ov[1].item()])
 
                 print('Filename:     {:s}'.format(iname))
                 print('Stroma DSC:   {:f}'.format(dsc[1]))
