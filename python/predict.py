@@ -168,8 +168,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Input parameters
-    train_name = '20190506_1145_deeplab_v3+'#args.train_name
-    net_type = 'deeplab_v3+'#args.net
+    train_name = args.train_name
+    net_type = args.net
     batch_size = args.batch_size
     folder_weights = args.folder_weigths
     folder_preds = args.folder_preds
@@ -193,7 +193,7 @@ if __name__ == '__main__':
     elif net_type == 'unet':
         model = Unet(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'unet_light':
-            model = UnetLight(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
+        model = UnetLight(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     elif net_type == 'sp_unet':
         model = SpatialPyramidUnet(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     elif net_type == 'd_unet':
