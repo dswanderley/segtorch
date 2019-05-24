@@ -54,13 +54,14 @@ def gettrainname(name):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PyTorch segmentation network training and prediction.")
-    parser.add_argument('--net', type=str, default='unet2',
-                        choices=['can', 'deeplab_v3+', 'unet', 'unet_light', 'unet2', 'd_unet2', 'sp_unet', 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
+    parser.add_argument('--net', type=str, default='sp_unet',
+                        choices=['can', 'deeplab_v3+', 'unet', 'unet_light', 'unet2', 'd_unet2', 
+                                 'sp_unet', 'sp_unet2', 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs (default: 1)')
     parser.add_argument('--batch_size', type=int, default=4,
-                        help='batch size (default: 4)')
+                        help='batch size (default: 1)')
     parser.add_argument('--dataset', type=str, default='ovarian',
                         choices=['ovarian', 'voc2012'],
                         help='select dataset, it also defines the input depth and the output classes (default: ovarian)')
@@ -96,7 +97,7 @@ if __name__ == '__main__':
     multitask = args.multitask
 
     network_name = net_type
-
+    
     # Manage network input - Ovarian dataset parameters
     if dataset_name == 'ovarian':
         in_channels = 1
@@ -142,7 +143,7 @@ if __name__ == '__main__':
 
     # Define training name
     train_name = gettrainname(network_name)
-
+    
     # Load Network model
     if net_type == 'can':
         model = CAN(in_channels, n_classes)
@@ -158,6 +159,8 @@ if __name__ == '__main__':
         model = UnetLight(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     elif net_type == 'sp_unet':
         model = SpatialPyramidUnet(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
+    elif net_type == 'sp_unet2':
+        model = SpatialPyramidUnet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     elif net_type == 'd_unet':
         model = DilatedUnet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
     else:
