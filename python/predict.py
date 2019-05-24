@@ -126,7 +126,7 @@ class Inference():
                 dsc = self.criterion(pred_un, gt_un)                
                 pred_ovary = torch.zeros(1, 2, height, width).to(self.device)
                 pred_ovary[:,0,...] = pred_un[:,0,...]
-                pred_ovary[:,1,...] = pred_un[:,1,...] + pred_un[:,2,...]
+                pred_ovary[:,1,...] = torch.clamp(pred_un[:,1,...] + pred_un[:,2,...], min=0, max=1)
                 dsc_ov = self.criterion(pred_ovary, ov_mask_un)
 
                 # Display evaluation
