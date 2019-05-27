@@ -51,6 +51,12 @@ class ResNet(nn.Module):
     def __init__(self, nInputChannels, block, layers, os=16, pretrained=False):
         self.inplanes = 64
         super(ResNet, self).__init__()
+
+        if layers[2] == 6:
+            self.resnet_type = 50
+        else:
+            self.resnet_type = 101
+
         if os == 16:
             strides = [1, 2, 2, 1]
             dilations = [1, 1, 1, 2]
@@ -136,7 +142,10 @@ class ResNet(nn.Module):
                 m.bias.data.zero_()
 
     def _load_pretrained_model(self):
-        pretrain_dict = model_zoo.load_url('https://download.pytorch.org/models/resnet101-5d3b4d8f.pth')
+        if self.resnet_type == 50:
+            pretrain_dict = model_zoo.load_url('https://download.pytorch.org/models/resnet50-19c8e357.pth')
+        else:
+            pretrain_dict = model_zoo.load_url('https://download.pytorch.org/models/resnet101-5d3b4d8f.pth')
         model_dict = {}
         state_dict = self.state_dict()
         for k, v in pretrain_dict.items():
@@ -145,8 +154,14 @@ class ResNet(nn.Module):
         state_dict.update(model_dict)
         self.load_state_dict(state_dict)
 
+
 def ResNet101(nInputChannels=3, os=16, pretrained=False):
     model = ResNet(nInputChannels, Bottleneck, [3, 4, 23, 3], os, pretrained=pretrained)
+    return model
+
+
+def ResNet50(nInputChannels=3, os=16, pretrained=False):
+    model = ResNet(nInputChannels, Bottleneck, [3, 4, 6, 3], os, pretrained=pretrained)
     return model
 
 
@@ -184,10 +199,10 @@ class ASPP_module(nn.Module):
 
 class DeepLabv3_plus(nn.Module):
     def __init__(self, nInputChannels=3, n_classes=21, os=16, softmax_out=True, dropout=0.2,
-                        pretrained=False, freeze_bn=False, _print=True):
+                        resnet_type=101, pretrained=False, freeze_bn=False, _print=True):
         if _print:
             print("Constructing DeepLabv3+ model...")
-            print("Backbone: Resnet-101")
+            print("Backbone: Resnet-" + str(resnet_type))
             print("Number of classes: {}".format(n_classes))
             print("Output stride: {}".format(os))
             print("Number of Input Channels: {}".format(nInputChannels))
@@ -197,7 +212,10 @@ class DeepLabv3_plus(nn.Module):
         self.inconv = FwdConv(nInputChannels, 3, kernel_size=1, padding=0)
 
         # Atrous Conv
-        self.resnet_features = ResNet101(3, os, pretrained=pretrained)
+        if resnet_type == 50:
+            self.resnet_features = ResNet50(3, os, pretrained=pretrained)
+        else:
+            self.resnet_features = ResNet101(3, os, pretrained=pretrained)
 
         # ASPP
         if os == 16:
@@ -326,7 +344,7 @@ def get_10x_lr_params(model):
 
 
 if __name__ == "__main__":
-    model = DeepLabv3_plus(nInputChannels=1, n_classes=3, os=16, pretrained=True, _print=True)
+    model = DeepLabv3_plus(nInputChannels=1, n_classes=3, os=16, resnet_type=50, pretrained=True, _print=True)
     #model.eval()
     model.train()
     image = torch.randn(4, 1, 512, 512)

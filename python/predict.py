@@ -155,8 +155,10 @@ if __name__ == '__main__':
     # Load inputs
     parser = argparse.ArgumentParser(description="PyTorch segmentation network predictions (only ovarian dataset).")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['can', 'deeplab_v3+', 'unet', 'unet_light', 'unet2', 'd_unet2', 
-                                 'sp_unet', 'sp_unet2', 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
+                        choices=['can', 'deeplab_v3+', 'deeplab_r50', 
+                                 'unet', 'unet_light', 'unet2', 'd_unet2', 
+                                 'sp_unet', 'sp_unet2', 
+                                 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
                         help='network name (default: unet2)')
     parser.add_argument('--train_name', type=str, default='20190428_1133_unet2',
                         help='training name (default: 20190428_1133_unet2)')
@@ -186,7 +188,9 @@ if __name__ == '__main__':
     if net_type == 'can':
         model = CAN(in_channels, n_classes)
     elif net_type == 'deeplab_v3+':
-        model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes, os=16)
+        model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes, os=16, pretrained=True)
+    elif net_type == 'deeplab_r50':
+        model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes, os=16, resnet_type=50, pretrained=True)
     elif net_type == 'gcn':
         model = GCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'gcn2':
