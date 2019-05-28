@@ -56,17 +56,68 @@ class Inference():
         else:
             state = torch.load(self.weights_path)
         self.model.load_state_dict(state['state_dict'])
+        self.state = state
 
 
-    def _save_data(self, table):
+    def _save_data(self, table_r):
         '''
             Save dice scores on a CSV file
         '''
-        filename = self.pred_folder + "results.csv"
-        # Save table
-        with open(filename,'w') as fp:
+        filename_r = self.pred_folder + "results.csv"
+        filename_s = self.pred_folder + "states.csv"
+
+        # Get training states
+        table_s = []
+        if 'epoch' in self.state:
+            table_s.append([
+                'Best Val Epoch',
+                inference.state['epoch']
+            ])
+        if 'best_loss'in self.state:
+            table_s.append([
+                'Best Val Loss',
+                inference.state['best_loss']
+            ])
+        if 'arch'in self.state:
+            table_s.append([
+                'Architecture',
+                inference.state['arch']
+            ])
+        if 'n_input'in self.state:
+            table_s.append([
+                'Input channels',
+                inference.state['n_input']
+            ])
+        if 'target'in self.state:
+            table_s.append([
+                'Main task',
+                inference.state['target']
+            ])
+        if 'loss_function'in self.state:
+            table_s.append([
+                'Loss function',
+                inference.state['loss_function']
+            ])
+        if 'loss_weights'in self.state:
+            table_s.append([
+                'Loss function weights',
+                inference.state['loss_weights']
+            ])
+        if 'device'in self.state:
+            table_s.append([
+                'Device',
+                inference.state['device']
+            ])
+
+        # Save results
+        with open(filename_r,'w') as fp:
             a = csv.writer(fp, delimiter=';')
-            a.writerows(table)
+            a.writerows(table_r)
+
+        # Save states
+        with open(filename_s,'w') as fp:
+            a = csv.writer(fp, delimiter=';')
+            a.writerows(table_s)  
 
 
     def predict(self, images, save=True):
