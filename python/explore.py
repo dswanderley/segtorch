@@ -46,20 +46,17 @@ def plot_kernels(tensor, num_cols=6):
     
 
 
-model = models.vgg11(pretrained=True)
-#model = Unet2(n_channels=1, n_classes=3, bilinear=False)
-# Load Weights
-#model.load_state_dict(state['state_dict'])
-
-
-
+#model = models.vgg11(pretrained=True)
+model = Unet2(n_channels=1, n_classes=3, bilinear=False)
 
 mm = model.double()
 filters = mm.modules
 body_model = [i for i in mm.children()][0]
-layer1 = body_model[0]
+#layer1 = body_model[0]
+layer1 = body_model.conv[0]
 tensor = layer1.weight.data.numpy()
 plot_kernels(tensor)
+
 
 
 # https://discuss.pytorch.org/t/visualize-feature-map/29597/2
