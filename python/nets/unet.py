@@ -377,7 +377,7 @@ class SpatialPyramidUnet(nn.Module):
         # Dilatation
         self.conv_bottom = ConvSequence(40, 48, len(self.blocks),
                             kernel_size=3, stride=1,
-                            padding=self.blocks, 
+                            padding=self.blocks,
                             dilatation=self.blocks,
                             batch_norm=True, dropout=0)
         # Spatial Pyramid Pooling
@@ -468,7 +468,7 @@ class SpatialPyramidUnet2(nn.Module):
         # Dilatation
         self.conv_bottom = ConvSequence(40, 48, len(self.blocks),
                             kernel_size=3, stride=1,
-                            padding=self.blocks, 
+                            padding=self.blocks,
                             dilatation=self.blocks,
                             batch_norm=True, dropout=0)
         # Spatial Pyramid Pooling

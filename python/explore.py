@@ -9,12 +9,14 @@ Created on Fri May 31 19:20:30 2019
 
 import torch
 import torchvision.models as models
+import matplotlib
+matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
 from nets.unet import *
 
 
 folder_weights = '../weights/'
-train_name = '20190503_1440_unet2'
+train_name = '20190428_1133_unet2'
 weights_path = folder_weights + train_name + '_weights.pth.tar'
 
 # Load CUDA if exist
@@ -25,38 +27,67 @@ if device.type == 'cpu':
 else:
     state = torch.load(weights_path)
 
+# Random input
+x = torch.rand(1,1,512,512)
 
-def plot_kernels(tensor, num_cols=6):
-    if not tensor.ndim==4:
-        raise Exception("assumes a 4D tensor")
-    if not tensor.shape[-1]==3:
-        raise Exception("last dim needs to be 3 to plot")
-    num_kernels = tensor.shape[0]
-    num_rows = 1+ num_kernels // num_cols
-    fig = plt.figure(figsize=(num_cols,num_rows))
-    for i in range(tensor.shape[0]):
-        ax1 = fig.add_subplot(num_rows,num_cols,i+1)
-        ax1.imshow(tensor[i])
-        ax1.axis('off')
-        ax1.set_xticklabels([])
-        ax1.set_yticklabels([])
-
-    plt.subplots_adjust(wspace=0.1, hspace=0.1)
+def plot_kernels(weight):
+    # Visualize conv filter
+    kernels = weight.detach()
+    fig, axarr = plt.subplots(kernels.size(0))
+    for idx in range(kernels.size(0)):
+        axarr[idx].imshow(kernels[idx].squeeze())
     plt.show()
-    
 
 
 #model = models.vgg11(pretrained=True)
 model = Unet2(n_channels=1, n_classes=3, bilinear=False)
+model.load_state_dict(state['state_dict'])
 
-mm = model.double()
-filters = mm.modules
-body_model = [i for i in mm.children()][0]
-#layer1 = body_model[0]
-layer1 = body_model.conv[0]
-tensor = layer1.weight.data.numpy()
-plot_kernels(tensor)
+model.eval()
+model = model.to(device)
 
 
+filters = model.modules
+body_model = [i for i in model.children()]
+# layer1 = body_model[0][0]
+layer1 = body_model[0].conv
 
+#plot_kernels(layer1[0].weight)
+
+activation = {}
+def get_activation(name):
+    def hook(model, input, output):
+        activation[name] = output.detach()
+    return hook
+
+
+model.conv_init.conv[0].register_forward_hook(get_activation('ext_conv1'))
+
+output = model(x)
+
+act = activation['ext_conv1'].squeeze()
+num_plot = 4
+fig, axarr = plt.subplots(min(act.size(0), num_plot))
+for idx in range(min(act.size(0), num_plot)):
+    axarr[idx].imshow(act[idx])
+
+plt.show()
 # https://discuss.pytorch.org/t/visualize-feature-map/29597/2
+
+
+
+from torchvision.utils import make_grid
+
+kernels = model.conv_init.conv[0].weight.detach().clone()
+kernels = kernels - kernels.min()
+kernels = kernels / kernels.max()
+img = make_grid(kernels)
+plt.imshow(img.permute(1, 2, 0))
+plt.show()
+
+
+print('')
+
+
+# https://stackoverflow.com/questions/52678215/find-input-that-maximises-output-of-a-neural-network-using-keras-and-tensorflow
+# https://towardsdatascience.com/how-to-visualize-convolutional-features-in-40-lines-of-code-70b7d87b0030

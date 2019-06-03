@@ -117,7 +117,7 @@ class Inference():
         # Save states
         with open(filename_s,'w') as fp:
             a = csv.writer(fp, delimiter=';')
-            a.writerows(table_s)  
+            a.writerows(table_s)
 
 
     def predict(self, images, save=True):
@@ -163,7 +163,7 @@ class Inference():
 
             # Compute Dice image by image
             for i in range(bs):
-                
+
                 # Get unique prediction
                 pred_un = pred_final[i,...]
                 pred_un.unsqueeze_(0)
@@ -174,7 +174,7 @@ class Inference():
                 ov_mask_un.unsqueeze_(0)
 
                 # Evaluate - dice
-                dsc = self.criterion(pred_un, gt_un)                
+                dsc = self.criterion(pred_un, gt_un)
                 pred_ovary = torch.zeros(1, 2, height, width).to(self.device)
                 pred_ovary[:,0,...] = pred_un[:,0,...]
                 pred_ovary[:,1,...] = torch.clamp(pred_un[:,1,...] + pred_un[:,2,...], min=0, max=1)
@@ -206,9 +206,9 @@ if __name__ == '__main__':
     # Load inputs
     parser = argparse.ArgumentParser(description="PyTorch segmentation network predictions (only ovarian dataset).")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['can', 'deeplab_v3+', 'deeplab_r50', 
-                                 'unet', 'unet_light', 'unet2', 'd_unet2', 
-                                 'sp_unet', 'sp_unet2', 
+                        choices=['can', 'deeplab_v3+', 'deeplab_r50',
+                                 'unet', 'unet_light', 'unet2', 'd_unet2',
+                                 'sp_unet', 'sp_unet2',
                                  'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
                         help='network name (default: unet2)')
     parser.add_argument('--train_name', type=str, default='20190428_1133_unet2',
