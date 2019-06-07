@@ -61,6 +61,19 @@ def get_activation(name):
     return hook
 
 
+class SaveFeatures():
+    def __init__(self, module):
+        self.hook = module.register_forward_hook(self.hook_fn)
+    def hook_fn(self, module, input, output):
+        if device.type == 'cpu':
+            self.features = torch.tensor(output,requires_grad=True)        
+        else:
+            self.features = torch.tensor(output,requires_grad=True).cuda()
+    def close(self):
+        self.hook.remove()
+
+
+
 model.conv_init.conv[0].register_forward_hook(get_activation('ext_conv1'))
 
 output = model(x)
@@ -91,3 +104,6 @@ print('')
 
 # https://stackoverflow.com/questions/52678215/find-input-that-maximises-output-of-a-neural-network-using-keras-and-tensorflow
 # https://towardsdatascience.com/how-to-visualize-convolutional-features-in-40-lines-of-code-70b7d87b0030
+
+
+# https://blog.keras.io/how-convolutional-neural-networks-see-the-world.html
