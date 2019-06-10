@@ -45,10 +45,10 @@ class FilterVisualizer():
     def __init__(self, size=56, upscaling_steps=12, upscaling_factor=1.2):
         self.size, self.upscaling_steps, self.upscaling_factor = size, upscaling_steps, upscaling_factor
         self.model = models.vgg16(pretrained=True).to(device).eval()
-        
+
     def visualize(self, layer, filter, lr=0.1, opt_steps=20, blur=None):
         sz = self.size
-        
+
         img = torch.rand(1,3,sz,sz)
         activations = SaveFeatures(list(self.model.children())[0][layer])  # register hook
 
@@ -69,14 +69,14 @@ class FilterVisualizer():
             if blur is not None: img_np = ndimage.uniform_filter(img_np, size=blur)  # blur image to reduce high frequency patterns
             img = torch.from_numpy(img_np).permute(2,0,1).unsqueeze_(0)
 
-            
+
             plt.imshow(img_np)
             plt.show()
 
 
         self.save(layer, filter)
         activations.close()
-        
+
     def save(self, layer, filter):
         plt.imsave("layer_"+str(layer)+"_filter_"+str(filter)+".png", np.clip(self.output, 0, 1))
 
