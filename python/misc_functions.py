@@ -127,6 +127,9 @@ def save_image(im, path):
         im_as_arr (Numpy array): Matrix of shape DxWxH
         path (str): Path to the image
     """
+    if im.shape[2] == 1:
+        im = np.tile(im,(1,1,3))
+
     if isinstance(im, (np.ndarray, np.generic)):
         im = format_np_output(im)
         im = Image.fromarray(im)
@@ -142,9 +145,14 @@ def preprocess_image(pil_im, resize_im=True):
     returns:
         im_as_var (torch variable): Variable that contains processed float tensor
     """
+
+    x_dim = pil_im.shape[2]
     # mean and std list for channels (Imagenet)
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
+    if x_dim == 1:
+        mean = [sum(mean)/len(mean)]
+        std = [sum(std)/len(std)]
     # Resize image
     if resize_im:
         pil_im.thumbnail((512, 512))
@@ -172,10 +180,17 @@ def recreate_image(im_as_var):
     returns:
         recreated_im (numpy arr): Recreated image in array
     """
+    x_dim =im_as_var.shape[1]
+
     reverse_mean = [-0.485, -0.456, -0.406]
     reverse_std = [1/0.229, 1/0.224, 1/0.225]
+
+    if x_dim == 1:
+        reverse_mean = [sum(reverse_mean)/len(reverse_mean)]
+        reverse_std = [sum(reverse_std)/len(reverse_std)]
+
     recreated_im = copy.copy(im_as_var.data.numpy()[0])
-    for c in range(3):
+    for c in range(x_dim):
         recreated_im[c] /= reverse_std[c]
         recreated_im[c] -= reverse_mean[c]
     recreated_im[recreated_im > 1] = 1
