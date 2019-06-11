@@ -10,8 +10,7 @@ import torch
 from torch.optim import Adam
 from torchvision import models
 
-from misc_functions import preprocess_image, recreate_image, save_image
-from nets.unet import *
+from explore.misc_functions import preprocess_image, recreate_image, save_image
 
 
 class CNNLayerVisualization():
@@ -118,10 +117,9 @@ class CNNLayerVisualization():
 
 if __name__ == '__main__':
 
-    cnn_layer = 3
-    filter_pos = 3
-
-    '''
+    cnn_layer = 17
+    filter_pos = 5
+    
     # Fully connected layer is not needed
     pretrained_model = models.vgg16(pretrained=True).features
     layer_vis = CNNLayerVisualization(pretrained_model, cnn_layer, filter_pos)
@@ -131,33 +129,3 @@ if __name__ == '__main__':
 
     # Layer visualization without pytorch hooks
     # layer_vis.visualise_layer_without_hooks()
-    '''
-
-    folder_weights = '../weights/'
-    train_name = '20190428_1133_unet2'
-    weights_path = folder_weights + train_name + '_weights.pth.tar'
-
-    # Load CUDA if exist
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    if device.type == 'cpu':
-        state = torch.load(weights_path, map_location='cpu')
-    else:
-        state = torch.load(weights_path)
-
-    model = Unet2(n_channels=1, n_classes=3, bilinear=False)
-    model.load_state_dict(state['state_dict'])
-    model = model.to(device)
-
-
-
-#    for child in model.children():
-#        print(child)
-
-    new_model = nn.Sequential(*list(model.children()))
-
-
-    layer_vis = CNNLayerVisualization(new_model, cnn_layer, filter_pos)
-
-    # Layer visualization with pytorch hooks
-    layer_vis.visualise_layer_with_hooks()

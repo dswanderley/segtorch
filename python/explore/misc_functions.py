@@ -1,7 +1,10 @@
 """
 Created on Thu Oct 21 11:09:09 2017
+Edited on Mon Jun 10 20:30:00 2019
 @author: Utku Ozbulak - github.com/utkuozbulak
+         Diego Wanderley
 """
+
 import os
 import copy
 import numpy as np
