@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
+from torchvision import models
 #from modeling.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 from nets.modules import *
 
@@ -343,8 +344,57 @@ def get_10x_lr_params(model):
                 yield k
 
 
+class DeepLabv3(nn.Module):
+    def __init__(self, n_channels=3, n_classes=21, softmax_out=True, dropout=0.2,
+                        resnet_type=101, pretrained=False):
+        super(DeepLabv3, self).__init__()
+
+        self.resnet_type = resnet_type
+        self.n_channels = n_channels
+        self.n_classes = n_classes
+        self.pretrained = pretrained
+
+        # Input conv is applied to convert the input to 3 ch depth
+        self.inconv = None
+        if n_channels != 3:
+            self.inconv = FwdConv(n_channels, 3, kernel_size=1, padding=0)
+        # Pre-trained model needs to be an identical network
+        if pretrained:
+            mid_classes = 21
+        else:
+            mid_classes = n_classes
+        # Maind body
+        if resnet_type == 50:    
+            self.deeplab = models.segmentation.deeplabv3_resnet50(pretrained=pretrained, num_classes=mid_classes)
+        else:
+            self.deeplab = models.segmentation.deeplabv3_resnet101(pretrained=pretrained, num_classes=mid_classes)
+
+        if n_classes != 21:
+            self.deeplab.classifier[-1] = nn.Conv2d(256, n_classes, kernel_size=(1, 1), stride=(1, 1))
+            
+            if  self.deeplab.aux_classifier != None:
+                self.deeplab.aux_classifier[-1] = nn.Conv2d(256, n_classes, kernel_size=(1, 1), stride=(1, 1))
+
+        # Softmax alternative
+        self.has_softmax = softmax_out
+        if softmax_out:
+            self.softmax = nn.Softmax2d()
+        else:
+            self.softmax = None
+
+    def forward(self, x):
+        if self.inconv != None:
+            x = self.inconv(x)
+        x = self.deeplab(x)
+        if self.softmax != None:
+            x = softmax(x)
+        
+        return x
+
+
+
 if __name__ == "__main__":
-    model = DeepLabv3_plus(nInputChannels=1, n_classes=3, os=16, resnet_type=50, pretrained=True, _print=True)
+    model = DeepLabv3(n_channels=1, n_classes=3, resnet_type=101, pretrained=True)
     #model.eval()
     model.train()
     image = torch.randn(4, 1, 512, 512)
