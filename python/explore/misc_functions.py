@@ -149,13 +149,14 @@ def preprocess_image(pil_im, resize_im=True):
         im_as_var (torch variable): Variable that contains processed float tensor
     """
 
-    x_dim = pil_im.shape[2]
     # mean and std list for channels (Imagenet)
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
-    if x_dim == 1:
-        mean = [sum(mean)/len(mean)]
-        std = [sum(std)/len(std)]
+
+    if type(pil_im) is np.ndarray:
+        if (len(pil_im.shape) > 2 and pil_im.shape[2] == 1) or len(pil_im.shape) == 2 :
+                mean = [sum(mean)/len(mean)]
+                std = [sum(std)/len(std)]
     # Resize image
     if resize_im:
         pil_im.thumbnail((512, 512))
@@ -230,9 +231,10 @@ def get_example_params(example_index):
         pretrained_model(Pytorch model): Model to use for the operations
     """
     # Pick one of the examples
-    example_list = (('../input_images/snake.jpg', 56),
-                    ('../input_images/cat_dog.png', 243),
-                    ('../input_images/spider.png', 72))
+    example_list = (('../datasets/examples/snake.jpg', 56),
+                    ('../datasets/examples/cat_dog.png', 243),
+                    ('../datasets/examples/spider.png', 72),
+                    ('../datasets/examples/ultrasound.png', 100))
     img_path = example_list[example_index][0]
     target_class = example_list[example_index][1]
     file_name_to_export = img_path[img_path.rfind('/')+1:img_path.rfind('.')]
