@@ -47,6 +47,7 @@ class Bottleneck(nn.Module):
 
         return out
 
+
 class ResNet(nn.Module):
 
     def __init__(self, nInputChannels, block, layers, os=16, pretrained=False):
@@ -365,7 +366,8 @@ class DeepLabv3(nn.Module):
             mid_classes = n_classes
         # Maind body
         if resnet_type == 50:    
-            self.deeplab = models.segmentation.deeplabv3_resnet50(pretrained=pretrained, num_classes=mid_classes)
+            self.deeplab = models.segmentation.deeplabv3_resnet50(pretrained=False, num_classes=mid_classes)
+            self.pretrained = False
         else:
             self.deeplab = models.segmentation.deeplabv3_resnet101(pretrained=pretrained, num_classes=mid_classes)
 
@@ -385,11 +387,11 @@ class DeepLabv3(nn.Module):
     def forward(self, x):
         if self.inconv != None:
             x = self.inconv(x)
-        x = self.deeplab(x)
+        x_deep = self.deeplab(x)
+        x_out = x_deep["out"]
         if self.softmax != None:
-            x = softmax(x)
-        
-        return x
+            x_out = self.softmax(x_out)
+        return x_out
 
 
 
@@ -398,9 +400,6 @@ if __name__ == "__main__":
     #model.eval()
     model.train()
     image = torch.randn(4, 1, 512, 512)
-    '''
-    with torch.no_grad():
-        output = model.forward(image)
-    '''
+
     output = model(image)
     print(output.size())
