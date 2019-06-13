@@ -206,7 +206,7 @@ if __name__ == '__main__':
     # Load inputs
     parser = argparse.ArgumentParser(description="PyTorch segmentation network predictions (only ovarian dataset).")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['can', 
+                        choices=['fcn_r101', 'fcn_r50',
                                 'deeplabv3', 'deeplabv3_r50', 'deeplabv3p', 'deeplabv3p_r50', 
                                  'unet', 'unet_light', 'unet2', 'd_unet2', 
                                  'sp_unet', 'sp_unet2', 
@@ -237,8 +237,10 @@ if __name__ == '__main__':
 
     bilinear = False
      # Load Network model
-    if net_type == 'can':
-        model = CAN(in_channels, n_classes)
+    if net_type == 'fcn_r101':
+        model = FCN(n_channels=in_channels, n_classes=n_classes, resnet_type=101)
+    elif net_type == 'fcn_r50':
+        model = FCN(n_channels=in_channels, n_classes=n_classes, resnet_type=50)
     # Deeplab v3
     elif net_type == 'deeplabv3':
         model = DeepLabv3(n_channels=in_channels, n_classes=n_classes, resnet_type=101)

@@ -346,7 +346,7 @@ def get_10x_lr_params(model):
 
 
 class DeepLabv3(nn.Module):
-    def __init__(self, n_channels=3, n_classes=21, softmax_out=True, dropout=0.2,
+    def __init__(self, n_channels=3, n_classes=21, softmax_out=True,
                         resnet_type=101, pretrained=False):
         super(DeepLabv3, self).__init__()
 
