@@ -19,6 +19,7 @@ from torch.utils.data import DataLoader
 from nets.deeplab import DeepLabv3, DeepLabv3_plus
 from nets.unet import *
 from nets.gcn import *
+from nets.fcn import *
 from utils.datasets import OvaryDataset
 from utils.losses import DiceCoefficients
 
