@@ -20,7 +20,7 @@ import utils.transformations as tsfrm
 
 from torch import optim
 from utils.logger import Logger
-from nets.deeplab import DeepLabv3_plus
+from nets.deeplab import DeepLabv3, DeepLabv3_plus
 from nets.unet import *
 from nets.dilation import *
 from nets.gcn import *
@@ -55,7 +55,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PyTorch segmentation network training and prediction.")
     parser.add_argument('--net', type=str, default='unet2',
-                        choices=['can', 'deeplab_v3+', 'deeplab_r50', 
+                        choices=['can', 
+                                'deeplabv3', 'deeplabv3_r50', 'deeplabv3p', 'deeplabv3p_r50', 
                                  'unet', 'unet_light', 'unet2', 'd_unet2', 
                                  'sp_unet', 'sp_unet2', 
                                  'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
@@ -145,18 +146,26 @@ if __name__ == '__main__':
 
     # Define training name
     train_name = gettrainname(network_name)
-    
+
     # Load Network model
     if net_type == 'can':
         model = CAN(in_channels, n_classes)
-    elif net_type == 'deeplab_v3+':
+    # Deeplab v3
+    elif net_type == 'deeplabv3':
+        model = DeepLabv3(n_channels=in_channels, n_classes=n_classes, resnet_type=101, pretrained=True)
+    elif net_type == 'deeplabv3_r50':
+        model = DeepLabv3(n_channels=in_channels, n_classes=n_classes, resnet_type=50, pretrained=True)
+    # Deeplab v3+
+    elif net_type == 'deeplabv3p':
         model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes, os=16, pretrained=True)
-    elif net_type == 'deeplab_r50':
+    elif net_type == 'deeplabv3p_r50':
         model = DeepLabv3_plus(nInputChannels=in_channels, n_classes=n_classes, os=16, resnet_type=50, pretrained=True)
+    # Global Convolution Network
     elif net_type == 'gcn':
         model = GCN(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'b_gcn':
         model = BalancedGCN(n_channels=in_channels, n_classes=n_classes)
+    # Unet models
     elif net_type == 'unet':
         model = Unet(n_channels=in_channels, n_classes=n_classes)
     elif net_type == 'unet_light':
