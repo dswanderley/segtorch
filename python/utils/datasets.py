@@ -180,14 +180,14 @@ class OvaryDataset(Dataset):
         t2 = 255. - t1
         # Background mask
         mask_bkgound = np.zeros((gt_np.shape[0], gt_np.shape[1]))
-        mask_bkgound[gt_np < t1] = 255.
+        mask_bkgound[gt_np < t1] = 1.
         # Stroma mask
         mask_stroma = np.zeros((gt_np.shape[0], gt_np.shape[1]))
-        mask_stroma[(gt_np >= t1) & (gt_np <= t2)] = 255.
+        mask_stroma[(gt_np >= t1) & (gt_np <= t2)] = 1.
 
         # Follicles mask
         mask_follicle = np.zeros((gt_np.shape[0], gt_np.shape[1]))
-        mask_follicle[gt_np > t2] = 255.
+        mask_follicle[gt_np > t2] = 1.
 
         # Main mask output
         if encods[0]:
@@ -196,28 +196,28 @@ class OvaryDataset(Dataset):
             multi_mask[...,0] = mask_bkgound
             multi_mask[...,1] = mask_stroma
             multi_mask[...,2] = mask_follicle
-            gt_mask = (multi_mask / 255.).astype(np.float32)
+            gt_mask = multi_mask.astype(np.float32)
         else:
             # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
-            gt_mask = (gt_np / 255.).astype(np.float32)
+            gt_mask = gt_np.astype(np.float32)
 
         '''
             Ovary Ground Truth preparation
         '''
         # Ovary mask
         mask_ovary = np.zeros((gt_np.shape[0], gt_np.shape[1]))
-        mask_stroma[gt_np >= t1] = 255.
+        mask_ovary[gt_np >= t1] = 1.
 
         # Ovarian auxiliary mask output
         if encods[1]:
             # Multi mask - background (R = 1) / ovary (G = 1)
             ov_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 2))
             ov_mask[...,0] = mask_bkgound
-            ov_mask[...,1] = mask_stroma
-            ov_mask = (ov_mask / 255.).astype(np.float32)
+            ov_mask[...,1] = mask_ovary
+            ov_mask = ov_mask.astype(np.float32)
         else:
             # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
-            ov_mask = (mask_ovary / 255.).astype(np.float32)
+            ov_mask = mask_ovary.astype(np.float32)
 
         '''
             Follicles edge Ground Truth preparation
@@ -234,7 +234,7 @@ class OvaryDataset(Dataset):
             # Multi mask - background (R = 1) / follicle (G = 1)
             # follicle mask
             fol_mask = np.zeros((gt_np.shape[0], gt_np.shape[1], 2))
-            fol_mask[...,1] = mask_follicle / 255.
+            fol_mask[...,1] = mask_follicle
             fol_mask[...,0] = 1. - fol_mask[...,1]
             fol_mask = (fol_mask).astype(np.float32)
             # final edge
@@ -244,14 +244,31 @@ class OvaryDataset(Dataset):
             fol_edge = (fol_edge).astype(np.float32)
         else:
             # Gray mask - background (0/255) / ovary  (128/255) / follicle (255/255)
-            fol_mask = (mask_follicle / 255.).astype(np.float32)
-            fol_edge = (mask_edges).astype(np.float32)
+            fol_mask = mask_follicle.astype(np.float32)
+            fol_edge = mask_edges.astype(np.float32)
 
         '''
             Instance Follicles mask
         '''
         # Get mask labeling each follicle from 1 to N value.
         inst_mask, num_inst = ndi.label(mask_follicle)
+
+        '''
+            Instance Bouding Boxes
+        '''
+        boxes = []
+        labels = []
+        # Ovary box
+        slice_x, slice_y = ndi.find_objects(mask_ovary==1)[0]
+        box = [slice_x.start, slice_y.start, slice_x.stop, slice_y.stop]
+        boxes.append(box)
+        labels.append(1)
+        # Follicles boxes
+        for i in range(1,num_inst+1):
+            slice_x, slice_y = ndi.find_objects(inst_mask==i)[0]
+            box = [slice_x.start, slice_y.start, slice_x.stop, slice_y.stop]
+            boxes.append(box)
+            labels.append(2)
 
         '''
             Interactive Object Selection
@@ -283,12 +300,8 @@ class OvaryDataset(Dataset):
 
         # Print data if necessary
         #Image.fromarray((255*im_np).astype(np.uint8)).save("im_np.png")
-        #Image.fromarray((255*gt_mask).astype(np.uint8)).save("gt_all.png")
-        #Image.fromarray((255*fol_edge[...,1]).astype(np.uint8)).save("gt_edg.png")
-        #Image.fromarray((255*fol_mask[...,1]).astype(np.uint8)).save("gt_fol.png")
 
         # Convert to torch (to be used on DataLoader)
-
         torch_im = torch.from_numpy(im_np)
         if len(torch_im.shape) > 2:
             torch_im = torch_im.permute(2, 0, 1).contiguous()
@@ -320,7 +333,10 @@ class OvaryDataset(Dataset):
                     'follicle_mask': torch_fol,
                     'follicle_edge': torch_edge,
                     'follicle_instances': torch_is,
-                    'num_follicles':  num_inst }
+                    'num_follicles':  num_inst,
+                    'boxes': boxes,
+                    'labels': labels
+                     }
 
         return sample
 
@@ -482,3 +498,23 @@ class VOC2012Dataset(Dataset):
                     'im_box':  im_box }
 
         return sample
+
+
+
+# Main calls
+if __name__ == '__main__':
+
+    from torch.utils.data import DataLoader
+
+    # pre-set
+    dataset = OvaryDataset(im_dir='../datasets/ovarian/im/test/',
+                           gt_dir='../datasets/ovarian/gt/test/',
+                           imap=False, clahe=False, transform=False)
+    # Loader
+    data_loader = DataLoader(dataset, batch_size=4, shuffle=True)
+    # iterate
+    for _, sample in enumerate(data_loader):
+            # Load data
+            image = sample['image']
+            gt_mask = sample['gt_mask']
+            im_name = sample['im_name']
