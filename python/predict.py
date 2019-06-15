@@ -64,10 +64,14 @@ class Inference():
         '''
             Save dice scores on a CSV file
         '''
+        # Save results
         filename_r = self.pred_folder + "results.csv"
-        filename_s = self.pred_folder + "states.csv"
+        with open(filename_r,'w') as fp:
+            a = csv.writer(fp, delimiter=';')
+            a.writerows(table_r)
 
         # Get training states
+        filename_s = self.pred_folder + "states.csv"
         table_s = []
         if 'epoch' in self.state:
             table_s.append([
@@ -109,11 +113,6 @@ class Inference():
                 'Device',
                 inference.state['device']
             ])
-
-        # Save results
-        with open(filename_r,'w') as fp:
-            a = csv.writer(fp, delimiter=';')
-            a.writerows(table_r)
 
         # Save states
         with open(filename_s,'w') as fp:
@@ -160,7 +159,8 @@ class Inference():
                 pred = pred[0]
 
             pred_max, pred_idx = pred.max(dim=1)
-            pred_final = torch.clamp((pred - pred_max.unsqueeze_(1)) + 0.0001, min=0)*10000
+            pred_final = torch.clamp((pred - pred_max.unsqueeze_(1)) \
+                                            + 0.0001, min=0)*10000
 
             # Compute Dice image by image
             for i in range(bs):
@@ -178,12 +178,15 @@ class Inference():
                 dsc = self.criterion(pred_un, gt_un)
                 pred_ovary = torch.zeros(1, 2, height, width).to(self.device)
                 pred_ovary[:,0,...] = pred_un[:,0,...]
-                pred_ovary[:,1,...] = torch.clamp(pred_un[:,1,...] + pred_un[:,2,...], min=0, max=1)
+                pred_ovary[:,1,...] = torch.clamp(pred_un[:,1,...] + pred_un[:,2,...],
+                                                min=0, max=1)
                 dsc_ov = self.criterion(pred_ovary, ov_mask_un)
 
                 # Display evaluation
                 iname = im_name[i]
-                dsc_data.append([iname, dsc[0].item(), dsc[1].item(), dsc[2].item(), dsc_ov[1].item()])
+                dsc_data.append([iname,
+                                dsc[0].item(), dsc[1].item(), dsc[2].item(),
+                                dsc_ov[1].item()])
 
                 print('Filename:     {:s}'.format(iname))
                 print('Stroma DSC:   {:f}'.format(dsc[1]))
@@ -192,10 +195,12 @@ class Inference():
                 print('')
                 # Save prediction
                 img_out = pred_final[i].detach().cpu().permute(1,2,0).numpy()
-                Image.fromarray((255*img_out).astype(np.uint8)).save(self.pred_folder + iname)
+                Image.fromarray((255*img_out).astype(np.uint8)).save( \
+                                                self.pred_folder + iname)
                 # Save probabilities
                 img_prob = pred[i].detach().cpu().permute(1,2,0).numpy()
-                Image.fromarray((255*img_prob).astype(np.uint8)).save(self.prob_folder + iname)
+                Image.fromarray((255*img_prob).astype(np.uint8)).save( \
+                                                    self.prob_folder + iname)
 
         self._save_data(dsc_data)
 
@@ -205,12 +210,13 @@ class Inference():
 if __name__ == '__main__':
 
     # Load inputs
-    parser = argparse.ArgumentParser(description="PyTorch segmentation network predictions (only ovarian dataset).")
+    parser = argparse.ArgumentParser(description="PyTorch segmentation network predictions \
+        (only ovarian dataset).")
     parser.add_argument('--net', type=str, default='unet2',
                         choices=['fcn_r101', 'fcn_r50',
-                                'deeplabv3', 'deeplabv3_r50', 'deeplabv3p', 'deeplabv3p_r50', 
-                                 'unet', 'unet_light', 'unet2', 'd_unet2', 
-                                 'sp_unet', 'sp_unet2', 
+                                'deeplabv3', 'deeplabv3_r50', 'deeplabv3p', 'deeplabv3p_r50',
+                                 'unet', 'unet_light', 'unet2', 'd_unet2',
+                                 'sp_unet', 'sp_unet2',
                                  'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
                         help='network name (default: unet2)')
     parser.add_argument('--train_name', type=str, default='20190428_1133_unet2',
@@ -277,7 +283,8 @@ if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Dataset definitions
-    dataset_test = OvaryDataset(im_dir='../datasets/ovarian/im/test/', gt_dir='../datasets/ovarian/gt/test/')
+    dataset_test = OvaryDataset(im_dir='../datasets/ovarian/im/test/',
+                                gt_dir='../datasets/ovarian/gt/test/')
 
     # Test network model
     print('Testing')
@@ -288,6 +295,7 @@ if __name__ == '__main__':
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
     # Load inference
-    inference = Inference(model, device, weights_path, batch_size=batch_size, folder=out_folder)
+    inference = Inference(model, device, weights_path,
+                    batch_size=batch_size, folder=out_folder)
     # Run inference
     inference.predict(dataset_test)
