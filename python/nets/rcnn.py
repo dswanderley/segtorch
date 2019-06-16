@@ -100,10 +100,25 @@ class MaskRCNN(nn.Module):
 
 
 if __name__ == "__main__":
-    
+
     image = torch.randn(4, 1, 512, 512)
-    model = MaskRCNN(n_channels=1, n_classes=3, pretrained=True)
-    model.eval()
-    
+
+    bbox = torch.FloatTensor([[120, 130, 300, 350], [200, 200, 250, 250]]) # [y1, x1, y2, x2] format
+    labels = torch.LongTensor([1, 2]) # 0 represents background
+    sub_sample = 16
+
+
+    model = FasterRCNN(n_channels=1, n_classes=3, pretrained=True)
+    #model.eval()
+    model.train()
+
     output = model(image)
+    #ValueError: In training mode, targets should be passed
+
     print(output)
+
+    rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+
+    loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
+        + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+    loss_temp += loss.item()
