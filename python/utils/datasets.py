@@ -269,6 +269,8 @@ class OvaryDataset(Dataset):
             box = [slice_x.start, slice_y.start, slice_x.stop, slice_y.stop]
             boxes.append(box)
             labels.append(2)
+        boxes = np.array(boxes)
+        labels = np.array(labels)
 
         '''
             Interactive Object Selection
@@ -511,10 +513,20 @@ if __name__ == '__main__':
                            gt_dir='../datasets/ovarian/gt/test/',
                            imap=False, clahe=False, transform=False)
     # Loader
-    data_loader = DataLoader(dataset, batch_size=4, shuffle=True)
+    data_loader = DataLoader(dataset, batch_size=1, shuffle=True)
     # iterate
     for _, sample in enumerate(data_loader):
             # Load data
-            image = sample['image']
-            gt_mask = sample['gt_mask']
-            im_name = sample['im_name']
+            images = sample['image']
+            boxes = sample['boxes']
+            labels = sample['labels']
+
+            targets = {
+                'boxes': boxes,
+                'labels': labels
+            }
+
+            images = list(image for image in images)
+
+            print('')
+
