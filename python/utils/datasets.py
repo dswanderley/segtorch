@@ -85,7 +85,8 @@ class OvaryDataset(Dataset):
     """
 
     def __init__(self, im_dir='im', gt_dir='gt',
-    one_hot=True, clahe=False, imap=False, transform=None):
+            one_hot=True, clahe=False, imap=False, transform=None,
+            out_tuple=False):
         """
         Args:
             im_dir (string): Directory with all the images.
@@ -94,6 +95,8 @@ class OvaryDataset(Dataset):
             on_hot (bool): Optional output encoding one-hot-encoding or gray levels
             transform (callable, optional): Optional transform to be applied
                 on a sample.
+            out_tuple (bool, optional): Return a Tuple with all data or an object
+                with labes - default is False.
         """
         self.im_dir = im_dir
         self.gt_dir = gt_dir
@@ -101,6 +104,7 @@ class OvaryDataset(Dataset):
         self.one_hot = one_hot
         self.clahe = clahe
         self.imap = imap
+        self.out_tuple = out_tuple
 
         ldir_im = set(x for x in os.listdir(self.im_dir))
         ldir_gt = set(x for x in os.listdir(self.gt_dir))
@@ -328,19 +332,57 @@ class OvaryDataset(Dataset):
         if len(torch_is.shape) > 2:
             torch_is = torch_is.permute(2, 0, 1).contiguous()
 
-        sample =  { 'im_name': im_name,
-                    'image': torch_im,
-                    'gt_mask': torch_gt,
-                    'ovary_mask': torch_ov,
-                    'follicle_mask': torch_fol,
-                    'follicle_edge': torch_edge,
-                    'follicle_instances': torch_is,
-                    'num_follicles':  num_inst,
-                    'boxes': boxes,
-                    'labels': labels
-                     }
+        boxes = torch.from_numpy(boxes)
+        labels = torch.from_numpy(labels)
 
-        return sample
+        # Return tuple
+        if self.out_tuple:
+            return  im_name, torch_im, \
+                    torch_gt, torch_ov, torch_fol, torch_edge, \
+                    torch_is, num_inst, boxes, labels
+
+        # Return tensors
+        else:
+            sample =  { 'im_name': im_name,
+                        'image': torch_im,
+                        'gt_mask': torch_gt,
+                        'ovary_mask': torch_ov,
+                        'follicle_mask': torch_fol,
+                        'follicle_edge': torch_edge,
+                        'follicle_instances': torch_is,
+                        'num_follicles':  num_inst,
+                        'targets': {
+                                    'boxes': boxes,
+                                    'labels': labels
+                                }
+                        }
+            return sample
+
+
+def collate_fn_ov_list(batch):
+    '''
+        Merges a list of samples to form a mini-batch
+        dictionary for OvaryDataset.
+    '''
+    el_list = []
+    for b in batch:
+        el_list.append(
+            {
+                'im_name': b[0],
+                'image': b[1],
+                'gt_mask': b[2],
+                'ovary_mask': b[3],
+                'follicle_mask': b[4],
+                'follicle_edge': b[5],
+                'follicle_instances': b[6],
+                'num_follicles':  b[7],
+                'targets': {
+                            'boxes': b[8],
+                            'labels': b[9]
+                        }
+            }
+        )
+    return el_list
 
 
 class VOC2012Dataset(Dataset):
@@ -502,7 +544,6 @@ class VOC2012Dataset(Dataset):
         return sample
 
 
-
 # Main calls
 if __name__ == '__main__':
 
@@ -511,22 +552,17 @@ if __name__ == '__main__':
     # pre-set
     dataset = OvaryDataset(im_dir='../datasets/ovarian/im/test/',
                            gt_dir='../datasets/ovarian/gt/test/',
-                           imap=False, clahe=False, transform=False)
+                           imap=False, clahe=False, transform=False, out_tuple=True)
     # Loader
-    data_loader = DataLoader(dataset, batch_size=1, shuffle=True)
+    data_loader = DataLoader(dataset, batch_size=4, shuffle=True,
+                                    collate_fn=collate_fn_ov_list)
     # iterate
     for _, sample in enumerate(data_loader):
             # Load data
-            images = sample['image']
-            boxes = sample['boxes']
-            labels = sample['labels']
 
-            targets = {
-                'boxes': boxes,
-                'labels': labels
-            }
+            images = list(s['image'] for s in sample)
 
-            images = list(image for image in images)
+            targets = [s['targets'] for s in sample]
 
             print('')
 
