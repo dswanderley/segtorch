@@ -46,10 +46,17 @@ class FasterRCNN(nn.Module):
         else:
             self.softmax = None
 
-    def forward(self, x):
+    def forward(self, x, tgts=None):
+        # input layer to convert to 3 channels
         if self.inconv != None:
             x = self.inconv(x)
-        x_out = self.body(x)
+        # Verify if is traning (this situation requires targets)
+        if self.body.training:
+            x = list(im for im in x) # convert to list (as required)
+            x_out = self.body(x,tgts)
+        else:
+            x_out = self.body(x)
+        # Softmax output if necessary
         if self.softmax != None:
             x_out = self.softmax(x_out)
         return x_out
@@ -101,24 +108,26 @@ class MaskRCNN(nn.Module):
 
 if __name__ == "__main__":
 
-    image = torch.randn(4, 1, 512, 512)
+    # https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html#putting-everything-together
+    # https://github.com/pytorch/vision/blob/master/references/classification/train.py
 
+    # Images
+    images = torch.randn(2, 1, 512, 512)
+    # Targets
     bbox = torch.FloatTensor([[120, 130, 300, 350], [200, 200, 250, 250]]) # [y1, x1, y2, x2] format
-    labels = torch.LongTensor([1, 2]) # 0 represents background
-    sub_sample = 16
+    lbls = torch.LongTensor([1, 2]) # 0 represents background
+    tgts = {
+        'boxes':  bbox,
+        'labels': lbls
+    }
+    targets = [tgts, tgts]
+    #images = list(image for image in images)
 
-
+    # Model
     model = FasterRCNN(n_channels=1, n_classes=3, pretrained=True)
     #model.eval()
     model.train()
 
-    output = model(image)
-    #ValueError: In training mode, targets should be passed
-
-    print(output)
-
-    rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
-
-    loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
-        + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
-    loss_temp += loss.item()
+    # output
+    loss_dict = model(images, targets)
+    print(loss_dict)
