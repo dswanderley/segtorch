@@ -96,10 +96,15 @@ class MaskRCNN(nn.Module):
         else:
             self.softmax = None
 
-    def forward(self, x):
+    def forward(self, x, tgts=None):
         if self.inconv != None:
             x = self.inconv(x)
-        x_out = self.body(x)
+        # Verify if is traning (this situation requires targets)
+        if self.body.training:
+            x = list(im for im in x) # convert to list (as required)
+            x_out = self.body(x,tgts)
+        else:
+            x_out = self.body(x)
         if self.softmax != None:
             x_out = self.softmax(x_out)
         return x_out
@@ -116,15 +121,21 @@ if __name__ == "__main__":
     # Targets
     bbox = torch.FloatTensor([[120, 130, 300, 350], [200, 200, 250, 250]]) # [y1, x1, y2, x2] format
     lbls = torch.LongTensor([1, 2]) # 0 represents background
+    mask = torch.zeros(2, 512, 512)
+    mask[0,120:300, 130:350] = 1
+    mask[1,200:250, 200:250] = 1
+    # targets per image
     tgts = {
         'boxes':  bbox,
-        'labels': lbls
+        'labels': lbls,
+        'masks': mask
     }
+    # targets to list (by batch)
     targets = [tgts, tgts]
     #images = list(image for image in images)
 
     # Model
-    model = FasterRCNN(n_channels=1, n_classes=3, pretrained=True)
+    model = MaskRCNN(n_channels=1, n_classes=3, pretrained=True)
     #model.eval()
     model.train()
 
