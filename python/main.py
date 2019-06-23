@@ -57,9 +57,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="PyTorch segmentation network training and prediction.")
     parser.add_argument('--net', type=str, default='unet2',
                         choices=['fcn_r101', 'fcn_r50',
-                                'deeplabv3', 'deeplabv3_r50', 'deeplabv3p', 'deeplabv3p_r50', 
-                                 'unet', 'unet_light', 'unet2', 'd_unet2', 
-                                 'sp_unet', 'sp_unet2', 
+                                'deeplabv3', 'deeplabv3_r50', 'deeplabv3p', 'deeplabv3p_r50',
+                                 'unet', 'unet_light', 'unet2', 'd_unet2',
+                                 'sp_unet', 'sp_unet2',
                                  'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     multitask = args.multitask
 
     network_name = net_type
-    
+
     # Manage network input - Ovarian dataset parameters
     if dataset_name == 'ovarian':
         in_channels = 1
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     if opt == 'adam':
         optmizer = optim.Adam(model.parameters(), lr=0.001)
     elif opt == 'adamax':
-        optmizer = optim.Adam(model.parameters(), lr=0.002)
+        optmizer = optim.Adamax(model.parameters(), lr=0.002)
         train_name += '_adamax'
     else:
         optmizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.99, weight_decay=0.0005)

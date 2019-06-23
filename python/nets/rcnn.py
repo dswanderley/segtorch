@@ -116,6 +116,7 @@ if __name__ == "__main__":
     # https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html#putting-everything-together
     # https://github.com/pytorch/vision/blob/master/references/classification/train.py
 
+
     # Images
     images = torch.randn(2, 1, 512, 512)
     # Targets
@@ -136,9 +137,16 @@ if __name__ == "__main__":
 
     # Model
     model = MaskRCNN(n_channels=1, n_classes=3, pretrained=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
     #model.eval()
     model.train()
 
     # output
     loss_dict = model(images, targets)
     print(loss_dict)
+
+    # Update weights
+    optimizer.zero_grad()
+    loss_dict['loss_box_reg'].backward()
+    optimizer.step()
