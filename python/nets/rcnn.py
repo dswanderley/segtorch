@@ -144,9 +144,10 @@ if __name__ == "__main__":
 
     # output
     loss_dict = model(images, targets)
-    print(loss_dict)
 
     # Update weights
     optimizer.zero_grad()
     loss_dict['loss_box_reg'].backward()
     optimizer.step()
+
+    print(loss_dict)
