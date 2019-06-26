@@ -85,14 +85,17 @@ class OvaryDataset(Dataset):
     """
 
     def __init__(self, im_dir='im', gt_dir='gt',
-            one_hot=True, clahe=False, imap=False, transform=None,
-            out_tuple=False):
+            one_hot=True, clahe=False, imap=False, 
+            ovary_inst=False, transform=None, out_tuple=False):
         """
         Args:
             im_dir (string): Directory with all the images.
             gt_dir (string): Directory with all the masks, with the same name of
-            the original images.
-            on_hot (bool): Optional output encoding one-hot-encoding or gray levels
+                the original images.
+            one_hot (bool): Optional output encoding one-hot-encoding or gray levels.
+            imap (bool, optional): Optional interactive maps.
+            ovary_inst(bool, optional): Define if ovary/stroma needs to be encoded 
+                in the semantic instances.
             transform (callable, optional): Optional transform to be applied
                 on a sample.
             out_tuple (bool, optional): Return a Tuple with all data or an object
@@ -104,6 +107,7 @@ class OvaryDataset(Dataset):
         self.one_hot = one_hot
         self.clahe = clahe
         self.imap = imap
+        self.ovary_instance = ovary_inst
         self.out_tuple = out_tuple
 
         ldir_im = set(x for x in os.listdir(self.im_dir))
@@ -137,15 +141,15 @@ class OvaryDataset(Dataset):
         # 1) Full GT mask, 2) Ovary mask, 3) Follicle mask
         if type(self.one_hot) is list:      # When a list is provided
             encods = []
-            for i in range(3):
-                if i > len(self.one_hot)-1: # If provided list is lower than expected
+            for i in range(4):
+                if i > len(self.one_hot) - 1: # If provided list is lower than expected
                     encods.append(True)
                 else:
                     encods.append(self.one_hot[i])
         elif type(self.one_hot) is bool:    # When a single bool is provided
-            encods = [self.one_hot, self.one_hot, self.one_hot]
+            encods = [self.one_hot, self.one_hot, self.one_hot, self.one_hot]
         else:
-            encods = [True, True, True]
+            encods = [True, True, True, True]
 
         '''
             Load images
@@ -255,7 +259,21 @@ class OvaryDataset(Dataset):
             Instance Follicles mask
         '''
         # Get mask labeling each follicle from 1 to N value.
-        inst_mask, num_inst = ndi.label(mask_follicle)
+        mask_inst, num_inst = ndi.label(mask_follicle)
+        # If ovary is treated as an instance
+        if self.ovary_instance:
+            mask_inst  = mask_inst + mask_ovary
+            num_inst += 1
+        
+        # Instance masks output
+        if encods[3]:
+            inst_mask = np.zeros((mask_inst.shape[0], mask_inst.shape[1], num_inst))
+            for i in range(num_inst):
+                aux = np.zeros((mask_inst.shape[0], mask_inst.shape[1]))
+                aux[mask_inst == i+1] = 1
+                inst_mask[...,i] = aux
+        else:
+            inst_mask = mask_inst.astype(np.float32)
 
         '''
             Instance Bouding Boxes
@@ -269,7 +287,7 @@ class OvaryDataset(Dataset):
         labels.append(1)
         # Follicles boxes
         for i in range(1,num_inst+1):
-            slice_x, slice_y = ndi.find_objects(inst_mask==i)[0]
+            slice_x, slice_y = ndi.find_objects(mask_inst==i)[0]
             box = [slice_x.start, slice_y.start, slice_x.stop, slice_y.stop]
             boxes.append(box)
             labels.append(2)
@@ -285,9 +303,9 @@ class OvaryDataset(Dataset):
                 im_np = im_np.reshape(im_np.shape+(1,))
 
             if type(self.imap) == list:
-                selected_points = select_clicks(inst_mask, rate=self.imap[0], margin=self.imap[1])
+                selected_points = select_clicks(mask_inst, rate=self.imap[0], margin=self.imap[1])
             else:
-                selected_points = select_clicks(inst_mask)
+                selected_points = select_clicks(mask_inst)
             imap_fol = iteractive_map(selected_points, im_np.shape[0], im_np.shape[1])
             imap_fol = imap_fol.reshape(imap_fol.shape+(1,))
             im_np = np.concatenate((im_np, imap_fol), axis=2).astype(np.float32)
@@ -552,7 +570,9 @@ if __name__ == '__main__':
     # pre-set
     dataset = OvaryDataset(im_dir='../datasets/ovarian/im/test/',
                            gt_dir='../datasets/ovarian/gt/test/',
-                           imap=False, clahe=False, transform=False, out_tuple=True)
+                           imap=False, clahe=False, transform=False, 
+                           ovary_inst=True,
+                           out_tuple=True)
     # Loader
     data_loader = DataLoader(dataset, batch_size=4, shuffle=True,
                                     collate_fn=collate_fn_ov_list)
