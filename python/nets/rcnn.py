@@ -110,11 +110,54 @@ class MaskRCNN(nn.Module):
         return x_out
 
 
+import torch.distributed as dist
+
+def is_dist_avail_and_initialized():
+    if not dist.is_available():
+        return False
+    if not dist.is_initialized():
+        return False
+    return True
+    
+def get_world_size():
+    if not is_dist_avail_and_initialized():
+        return 1
+    return dist.get_world_size()
+
+
+def reduce_dict(input_dict, average=True):
+    """
+    Args:
+        input_dict (dict): all the values will be reduced
+        average (bool): whether to do average or sum
+    Reduce the values in the dictionary from all processes so that all processes
+    have the averaged results. Returns a dict with the same fields as
+    input_dict, after reduction.
+    """
+    world_size = get_world_size()
+    if world_size < 2:
+        return input_dict
+    with torch.no_grad():
+        names = []
+        values = []
+        # sort the keys so that they are consistent across processes
+        for k in sorted(input_dict.keys()):
+            names.append(k)
+            values.append(input_dict[k])
+        values = torch.stack(values, dim=0)
+        dist.all_reduce(values)
+        if average:
+            values /= world_size
+        reduced_dict = {k: v for k, v in zip(names, values)}
+    return reduced_dict
+
 
 if __name__ == "__main__":
 
+    import math
+
     # https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html#putting-everything-together
-    # https://github.com/pytorch/vision/blob/master/references/classification/train.py
+    # https://github.com/pytorch/vision/blob/master/references/detection/train.py
 
 
     # Images
@@ -144,10 +187,23 @@ if __name__ == "__main__":
 
     # output
     loss_dict = model(images, targets)
+    # multi-task loss
+    losses = sum(loss for loss in loss_dict.values())
+    
+    # reduce losses over all GPUs for logging purposes
+    loss_dict_reduced = reduce_dict(loss_dict)
+    losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+
+    loss_value = losses_reduced.item()
+    
+    if not math.isfinite(loss_value):
+        print("Loss is {}, stopping training".format(loss_value))
+        print(loss_dict_reduced)
+        sys.exit(1)
 
     # Update weights
     optimizer.zero_grad()
-    loss_dict['loss_box_reg'].backward()
+    losses.backward()
     optimizer.step()
 
     print(loss_dict)
