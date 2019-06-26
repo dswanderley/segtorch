@@ -76,7 +76,7 @@ if __name__ == '__main__':
                         choices=['adam', 'adamax', 'sgd'],
                         help='optmization process (default: adam)')
     parser.add_argument('--loss', type=str, default='dsc',
-                        choices=['dice', 'wdice', 'discriminative', 'crossentropy'],
+                        choices=['dice', 'wdice', 'discriminative', 'crossentropy', 'multitaskdict'],
                         help='loss function (default: dice)')
     parser.add_argument('--clahe', type=bool, default=False,
                         help='whether to use adaptive histogram equalization (default: False)')
@@ -229,6 +229,9 @@ if __name__ == '__main__':
     elif loss == 'discriminative' or loss == 'dlf':
         loss_function = DiscriminativeLoss(n_features=2)
         train_name += '_dlf'
+    elif loss == 'multitaskdict':
+        loss_function = MultiTaskDictLoss()
+        train_name += '_mtd'
     else:
         loss_function = nn.CrossEntropyLoss()
         train_name += '_entp'

@@ -121,6 +121,24 @@ class WeightedDiceLoss(nn.Module):
         return loss_dsc
 
 
+class MultiTaskDictLoss(nn.Module):
+    '''
+    Multi-task loss from a dictionary of losses.
+
+    Arguments:
+        @param prediction loss: dictionary of losses tensors
+    '''
+
+    def __init__(self):
+        super(MultiTaskDictLoss, self).__init__()
+
+    def forward (self, loss_dict):
+
+        losses = sum(loss for loss in loss_dict.values())
+
+        return losses
+
+
 class DiscriminativeLoss(nn.Module):
     """
         Discriminative Loss function
