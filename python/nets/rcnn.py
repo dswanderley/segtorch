@@ -15,6 +15,9 @@ from modules import *
 
 
 class FasterRCNN(nn.Module):
+    '''
+    Faster R-CNN Class
+    '''
     def __init__(self, n_channels=3, n_classes=21, softmax_out=False,
                         resnet_type=101, pretrained=False):
         super(FasterRCNN, self).__init__()
@@ -63,6 +66,9 @@ class FasterRCNN(nn.Module):
 
 
 class MaskRCNN(nn.Module):
+    '''
+    Mask R-CNN Class
+    '''
     def __init__(self, n_channels=3, n_classes=21, softmax_out=False,
                         resnet_type=101, pretrained=False):
         super(MaskRCNN, self).__init__()
@@ -96,6 +102,34 @@ class MaskRCNN(nn.Module):
         else:
             self.softmax = None
 
+    def get_output_segmentation(self, x):
+        '''
+        Calculate output segmentation given list of dictionaries with masks and labels.
+        '''
+        x_out = []
+        for el in x:
+            insts, _, h, w = el['masks'].shape
+            x_temp = torch.zeros(1, self.n_classes, h, w)
+            #
+            for lbl, mask in zip(el['labels'], el['masks']):
+                idx = lbl.item()
+                x_temp[:,idx,...] = x_temp[:,idx,...] + mask
+            x_temp[:,0,...] = torch.ones(1, 1, h, w) - x_temp[:,1,...] - x_temp[:,2,...]
+            # Threshold from 0 to 1
+            x_temp = torch.clamp(x_temp, 0., 1.)
+            # Add to output
+            x_out.append(x_temp)
+
+            '''
+            import numpy as np
+            from PIL import Image
+            aux = x_temp[0]
+            aux = aux.permute(1, 2, 0).contiguous()
+            Image.fromarray((255*aux.data.numpy()).astype(np.uint8)).save("im_np.png")
+            print(x_temp.shape)
+            '''
+        return x_out
+
     def forward(self, x, tgts=None):
         if self.inconv != None:
             x = self.inconv(x)
@@ -104,7 +138,7 @@ class MaskRCNN(nn.Module):
             x = list(im for im in x) # convert to list (as required)
             x_out = self.body(x,tgts)
         else:
-            x_out = self.body(x)
+            x_out = self.body(x,tgts)
         if self.softmax != None:
             x_out = self.softmax(x_out)
         return x_out
@@ -118,7 +152,7 @@ def is_dist_avail_and_initialized():
     if not dist.is_initialized():
         return False
     return True
-    
+
 def get_world_size():
     if not is_dist_avail_and_initialized():
         return 1
@@ -182,20 +216,22 @@ if __name__ == "__main__":
     model = MaskRCNN(n_channels=1, n_classes=3, pretrained=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    #model.eval()
-    model.train()
+    model.eval()
+    #model.train()
 
     # output
     loss_dict = model(images, targets)
-    # multi-task loss
+
+    if model.training:
+        # multi-task loss
     losses = sum(loss for loss in loss_dict.values())
-    
+
     # reduce losses over all GPUs for logging purposes
     loss_dict_reduced = reduce_dict(loss_dict)
     losses_reduced = sum(loss for loss in loss_dict_reduced.values())
 
     loss_value = losses_reduced.item()
-    
+
     if not math.isfinite(loss_value):
         print("Loss is {}, stopping training".format(loss_value))
         print(loss_dict_reduced)
@@ -205,5 +241,8 @@ if __name__ == "__main__":
     optimizer.zero_grad()
     losses.backward()
     optimizer.step()
+
+    else:
+        model.get_output_segmentation(loss_dict)
 
     print(loss_dict)
