@@ -25,7 +25,8 @@ from nets.unet import *
 from nets.dilation import *
 from nets.gcn import *
 from nets.fcn import *
-from utils.datasets import OvaryDataset, VOC2012Dataset
+from nets.rcnn import *
+from utils.datasets import OvaryDataset, VOC2012Dataset, collate_fn_ov_list
 from utils.losses import *
 from train import Training
 from predict import Inference
@@ -60,7 +61,8 @@ if __name__ == '__main__':
                                 'deeplabv3', 'deeplabv3_r50', 'deeplabv3p', 'deeplabv3p_r50',
                                  'unet', 'unet_light', 'unet2', 'd_unet2',
                                  'sp_unet', 'sp_unet2',
-                                 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
+                                 'gcn', 'gcn2', 'b_gcn', 'u_gcn',
+                                 'mask_rcnn'],
                         help='network name (default: unet2)')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs (default: 1)')
@@ -136,20 +138,15 @@ if __name__ == '__main__':
         in_channels += 1
         network_name = 'i' + network_name
 
-    print('--- Network Parameters ---')
-    print('network name:   {:s}'.format(network_name))
-    print('dataset:        {:s}'.format(dataset_name))
-    print('output classes: {:d}'.format(n_classes))
-    print('epochs:         {:d}'.format(n_epochs))
-    print('batch size:     {:d}'.format(batch_size))
-    print('optmization:    {:s}'.format(opt))
-    print('loss funcion:   {:s}'.format(loss))
-
-    # Define training name
-    train_name = gettrainname(network_name)
-
+    train_with_targets = False
     # Load Network model
-    if net_type == 'fcn_r101':
+    if net_type == 'mask_rcnn':
+        model = MaskRCNN(n_channels=in_channels, n_classes=n_classes, pretrained=True)
+        n_classes = 3
+        target = 'targets'
+        train_with_targets = True
+    # FCN models
+    elif net_type == 'fcn_r101':
         model = FCN(n_channels=in_channels, n_classes=n_classes, resnet_type=101, pretrained=True)
     elif net_type == 'fcn_r50':
         model = FCN(n_channels=in_channels, n_classes=n_classes, resnet_type=50)
@@ -182,6 +179,17 @@ if __name__ == '__main__':
     else:
         model = Unet2(n_channels=in_channels, n_classes=n_classes, bilinear=bilinear)
 
+    # Define training name
+    train_name = gettrainname(network_name)
+    # Show parameters
+    print('--- Network Parameters ---')
+    print('network name:   {:s}'.format(network_name))
+    print('dataset:        {:s}'.format(dataset_name))
+    print('output classes: {:d}'.format(n_classes))
+    print('epochs:         {:d}'.format(n_epochs))
+    print('batch size:     {:d}'.format(batch_size))
+    print('optmization:    {:s}'.format(opt))
+    print('loss funcion:   {:s}'.format(loss))
     print('model class:   {:s}'.format(str(type(model))))
     print('--------------------------')
     print('')
@@ -199,9 +207,9 @@ if __name__ == '__main__':
     if dataset_name == 'ovarian':
         im_dir = '../datasets/ovarian/im/'
         gt_dir = '../datasets/ovarian/gt/'
-        dataset_train = OvaryDataset(im_dir=im_dir+'train/',gt_dir=gt_dir+'train/',  imap=interaction, clahe=clahe, transform=transform)
-        dataset_val =   OvaryDataset(im_dir=im_dir+'val/',  gt_dir=gt_dir+'val/',    imap=interaction, clahe=clahe)
-        dataset_test =  OvaryDataset(im_dir=im_dir+'test/', gt_dir=gt_dir+'test/',   imap=interaction, clahe=clahe)
+        dataset_train = OvaryDataset(im_dir=im_dir+'train/',gt_dir=gt_dir+'train/', imap=interaction, clahe=clahe, transform=transform)
+        dataset_val =   OvaryDataset(im_dir=im_dir+'val/',  gt_dir=gt_dir+'val/',   imap=interaction, clahe=clahe)
+        dataset_test =  OvaryDataset(im_dir=im_dir+'test/', gt_dir=gt_dir+'test/',  imap=interaction, clahe=clahe)
     else:
         im_dir = '../datasets/voc2012/JPEGImages/'
         gt_dir = '../datasets/voc2012/SegmentationClass/'
@@ -242,6 +250,7 @@ if __name__ == '__main__':
     # Run training
     training = Training(model, device, dataset_train, dataset_val,
                         optmizer, loss_function, target=target,
+                        train_with_targets = train_with_targets,
                         logger=logger, train_name=train_name, arch=net_type)
     training.train(epochs=n_epochs, batch_size=batch_size)
     print('------------- END OF TRAINING -------------')

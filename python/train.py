@@ -9,6 +9,7 @@ Created on Wed Fev 08 00:40:00 2019
 
 import torch
 from torch.utils.data import DataLoader
+from utils.datasets import collate_fn_ov_list
 
 class Training:
     """
@@ -17,7 +18,7 @@ class Training:
 
     def __init__(self, model, device, train_set, valid_set, opt, loss,
                   target='gt_mask', loss_weights=None, train_name='net', logger=None,
-                  arch='unet'):
+                  arch='unet', train_with_targets=False):
         '''
             Training class - Constructor
         '''
@@ -44,6 +45,7 @@ class Training:
         else:
             self.loss_weights = 1.
         self.arch = arch
+        self.train_with_targets = train_with_targets
 
     def _saveweights(self, state):
         '''
@@ -69,30 +71,50 @@ class Training:
 
         # Batch iteration - Training dataset
         for batch_idx, sample in enumerate(data_loader_train):
+            # desired parameters
+            pred_masks = None
+            # output targets
+            targets = []
+            # Treat output
+            if type(sample) is list: # list output
+                bs = len(sample)
+                ch, h, w = sample[0]['image'].shape
+                # Get images
+                image = torch.zeros(bs,ch, h, w)
+                for i in range(bs):
+                    image[i] = sample[i]['image']
+                # Get masks
+                for tgt_str in self.target:
+                    targets.append([s[tgt_str] for s in sample])
+            else:                   # Dict output
+                # Load data
+                image = sample['image'].to(self.device)
+                # Get masks
+                for tgt_str in self.target:
+                    targets.append(sample[tgt_str].to(self.device))
 
-            # Load data
-            image = sample['image'].to(self.device)
-            tgt_mask = []
-            for tgt_str in self.target:
-                tgt_mask.append(sample[tgt_str].to(self.device))
-
-            # Handle input
-            if len(image.size()) < 4:
-                image.unsqueeze_(1) # add a dimension to the tensor
+                # Handle input
+                if len(image.size()) < 4:
+                    image.unsqueeze_(1) # add a dimension to the tensor
 
             # Run prediction
-            pred_masks = self.model(image)
-            # Handle multiples outputs
-            if type(pred_masks) is list:
-                prediction = pred_masks[0]
-                losses = []
-                for k in range(len(pred_masks)):
-                    losses.append(self.criterion(pred_masks[k], tgt_mask[k]) * self.loss_weights[k])
-                loss = sum(losses)
+            if self.train_with_targets:
+                loss_dict = self.model(image, targets[0])
+                loss = self.criterion(loss_dict)
             else:
-                prediction = pred_masks
-                # Calculate loss for each batch
-                loss = self.criterion(pred_masks, tgt_mask[0])
+                pred_masks = self.model(image)
+            
+                # Handle multiples outputs
+                if type(pred_masks) is list:
+                    prediction = pred_masks[0]
+                    losses = []
+                    for k in range(len(pred_masks)):
+                        losses.append(self.criterion(pred_masks[k], targets[k]) * self.loss_weights[k])
+                    loss = sum(losses)
+                else:
+                    prediction = pred_masks
+                    # Calculate loss for each batch
+                    loss = self.criterion(pred_masks, targets[0])
 
             # Update epoch loss
             loss_train_sum += len(image) * loss.item()
@@ -193,7 +215,10 @@ class Training:
         '''
 
         # Load Dataset
-        data_loader_train = DataLoader(self.dataset_train, batch_size=batch_size, shuffle=True)
+        if self.train_with_targets:
+            data_loader_train = DataLoader(self.dataset_train, batch_size=batch_size, shuffle=True, collate_fn=collate_fn_ov_list)
+        else:
+            data_loader_train = DataLoader(self.dataset_train, batch_size=batch_size, shuffle=True)
         data_loader_val = DataLoader(self.dataset_val, batch_size=1, shuffle=False)
 
         # Define parameters

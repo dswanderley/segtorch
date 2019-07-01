@@ -11,7 +11,7 @@ Created on Thu Jun 13 18:30:06 2019
 import torch
 import torch.nn as nn
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, maskrcnn_resnet50_fpn
-from modules import *
+from nets.modules import *
 
 
 class FasterRCNN(nn.Module):
@@ -216,31 +216,31 @@ if __name__ == "__main__":
     model = MaskRCNN(n_channels=1, n_classes=3, pretrained=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    model.eval()
-    #model.train()
+    #model.eval()
+    model.train()
 
     # output
     loss_dict = model(images, targets)
 
     if model.training:
         # multi-task loss
-    losses = sum(loss for loss in loss_dict.values())
+        losses = sum(loss for loss in loss_dict.values())
 
-    # reduce losses over all GPUs for logging purposes
-    loss_dict_reduced = reduce_dict(loss_dict)
-    losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+        # reduce losses over all GPUs for logging purposes
+        loss_dict_reduced = reduce_dict(loss_dict)
+        losses_reduced = sum(loss for loss in loss_dict_reduced.values())
 
-    loss_value = losses_reduced.item()
+        loss_value = losses_reduced.item()
 
-    if not math.isfinite(loss_value):
-        print("Loss is {}, stopping training".format(loss_value))
-        print(loss_dict_reduced)
-        sys.exit(1)
+        if not math.isfinite(loss_value):
+            print("Loss is {}, stopping training".format(loss_value))
+            print(loss_dict_reduced)
+            sys.exit(1)
 
-    # Update weights
-    optimizer.zero_grad()
-    losses.backward()
-    optimizer.step()
+        # Update weights
+        optimizer.zero_grad()
+        losses.backward()
+        optimizer.step()
 
     else:
         model.get_output_segmentation(loss_dict)
