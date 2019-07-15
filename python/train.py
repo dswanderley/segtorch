@@ -78,9 +78,13 @@ class Training:
             # Treat output
             if type(sample) is list: # list output
                 bs = len(sample)
-                ch, h, w = sample[0]['image'].shape
+                if len(sample[0]['image'].shape) < 3:
+                    h, w = sample[0]['image'].shape
+                    ch = 1
+                else:
+                    ch, h, w = sample[0]['image'].shape
                 # Get images
-                image = torch.zeros(bs,ch, h, w)
+                image = torch.zeros(bs, ch, h, w)
                 for i in range(bs):
                     image[i] = sample[i]['image']
                 # Get masks
