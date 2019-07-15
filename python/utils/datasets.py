@@ -266,12 +266,13 @@ class OvaryDataset(Dataset):
             num_inst += 1
 
         # Instance masks output
+        masks = np.zeros((mask_inst.shape[0], mask_inst.shape[1], num_inst))
+        for i in range(num_inst):
+            aux = np.zeros((mask_inst.shape[0], mask_inst.shape[1]))
+            aux[mask_inst == i+1] = 1
+            masks[...,i] = aux
         if encods[3]:
-            inst_mask = np.zeros((mask_inst.shape[0], mask_inst.shape[1], num_inst))
-            for i in range(num_inst):
-                aux = np.zeros((mask_inst.shape[0], mask_inst.shape[1]))
-                aux[mask_inst == i+1] = 1
-                inst_mask[...,i] = aux
+            inst_mask = masks
         else:
             inst_mask = mask_inst.astype(np.float32)
 
@@ -280,19 +281,16 @@ class OvaryDataset(Dataset):
         '''
         boxes = []
         labels = []
-        # Ovary box
-        slice_x, slice_y = ndi.find_objects(mask_ovary==1)[0]
-        box = [slice_x.start, slice_y.start, slice_x.stop, slice_y.stop]
-        boxes.append(box)
-        labels.append(1)
         # Follicles boxes
-        for i in range(1,num_inst+1):
-            slice_x, slice_y = ndi.find_objects(mask_inst==i)[0]
-            box = [slice_x.start, slice_y.start, slice_x.stop, slice_y.stop]
+        for i in range(0,num_inst):
+            if (i == 0 and self.ovary_instance):
+                labels.append(1)
+            else:
+                labels.append(2)
+            slice_x, slice_y = ndi.find_objects(mask_inst==i+1)[0]
+            box = [float(slice_x.start), float(slice_y.start),
+                   float(slice_x.stop),  float(slice_y.stop)]
             boxes.append(box)
-            labels.append(2)
-        boxes = np.array(boxes)
-        labels = np.array(labels)
 
         '''
             Interactive Object Selection
@@ -350,14 +348,15 @@ class OvaryDataset(Dataset):
         if len(torch_is.shape) > 2:
             torch_is = torch_is.permute(2, 0, 1).contiguous()
 
-        boxes = torch.from_numpy(boxes)
-        labels = torch.from_numpy(labels)
+        boxes = torch.FloatTensor(boxes)
+        labels = torch.LongTensor(labels)
+        masks = torch.from_numpy(masks)
 
         # Return tuple
         if self.out_tuple:
             return  im_name, torch_im, \
                     torch_gt, torch_ov, torch_fol, torch_edge, \
-                    torch_is, num_inst, boxes, labels
+                    torch_is, num_inst, boxes, labels, masks
 
         # Return tensors
         else:
@@ -371,7 +370,8 @@ class OvaryDataset(Dataset):
                         'num_follicles':  num_inst,
                         'targets': {
                                     'boxes': boxes,
-                                    'labels': labels
+                                    'labels': labels,
+                                    'masks': masks
                                 }
                         }
             return sample
@@ -396,7 +396,8 @@ def collate_fn_ov_list(batch):
                 'num_follicles':  b[7],
                 'targets': {
                             'boxes': b[8],
-                            'labels': b[9]
+                            'labels': b[9],
+                            'masks': b[10]
                         }
             }
         )

@@ -120,14 +120,6 @@ class MaskRCNN(nn.Module):
             # Add to output
             x_out.append(x_temp)
 
-            '''
-            import numpy as np
-            from PIL import Image
-            aux = x_temp[0]
-            aux = aux.permute(1, 2, 0).contiguous()
-            Image.fromarray((255*aux.data.numpy()).astype(np.uint8)).save("im_np.png")
-            print(x_temp.shape)
-            '''
         return x_out
 
     def forward(self, x, tgts=None):
@@ -200,8 +192,8 @@ if __name__ == "__main__":
     bbox = torch.FloatTensor([[120, 130, 300, 350], [200, 200, 250, 250]]) # [y1, x1, y2, x2] format
     lbls = torch.LongTensor([1, 2]) # 0 represents background
     mask = torch.zeros(2, 512, 512)
-    mask[0,120:300, 130:350] = 1
-    mask[1,200:250, 200:250] = 1
+    mask[0, 120:300, 130:350] = 1
+    mask[1, 200:250, 200:250] = 1
     # targets per image
     tgts = {
         'boxes':  bbox,

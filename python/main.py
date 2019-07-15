@@ -139,13 +139,13 @@ if __name__ == '__main__':
 
     train_with_targets = False
 
-    net_type = 'mask_rcnn'
-
     # Load Network model
     if net_type == 'mask_rcnn':
-        model = MaskRCNN(n_channels=in_channels, n_classes=n_classes, pretrained=True)
+        n_classes = 3
         target = 'targets'
+        loss = 'multitaskdict'
         train_with_targets = True
+        model = MaskRCNN(n_channels=in_channels, n_classes=n_classes, pretrained=True)
     # FCN models
     elif net_type == 'fcn_r101':
         model = FCN(n_channels=in_channels, n_classes=n_classes, resnet_type=101, pretrained=True)
@@ -208,7 +208,9 @@ if __name__ == '__main__':
     if dataset_name == 'ovarian':
         im_dir = '../datasets/ovarian/im/'
         gt_dir = '../datasets/ovarian/gt/'
-        dataset_train = OvaryDataset(im_dir=im_dir+'train/',gt_dir=gt_dir+'train/', imap=interaction, clahe=clahe, out_tuple=train_with_targets, transform=transform)
+        dataset_train = OvaryDataset(im_dir=im_dir+'train/',gt_dir=gt_dir+'train/', imap=interaction, clahe=clahe,
+                                     ovary_inst=train_with_targets, out_tuple=train_with_targets,
+                                     transform=transform)
         dataset_val =   OvaryDataset(im_dir=im_dir+'val/',  gt_dir=gt_dir+'val/',   imap=interaction, clahe=clahe)
         dataset_test =  OvaryDataset(im_dir=im_dir+'test/', gt_dir=gt_dir+'test/',  imap=interaction, clahe=clahe)
     else:
