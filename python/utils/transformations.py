@@ -1062,7 +1062,7 @@ class RandomAffine(object):
                    F.affine(target, *ret, resample=self.resample_tg, fillcolor=self.fillcolor), \
                    F.affine(mask, *ret, resample=self.resample_mask, fillcolor=self.fillcolor)
                    # resample = False is by default nearest, appropriate for targets
-        
+
         return F.affine(img, *ret, resample=self.resample, fillcolor=self.fillcolor)
 
     def __repr__(self):

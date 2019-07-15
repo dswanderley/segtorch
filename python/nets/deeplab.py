@@ -365,7 +365,7 @@ class DeepLabv3(nn.Module):
         else:
             mid_classes = n_classes
         # Maind body
-        if resnet_type == 50:    
+        if resnet_type == 50:
             self.deeplab = deeplabv3_resnet50(pretrained=False, num_classes=mid_classes)
             self.pretrained = False
         else:
@@ -373,7 +373,7 @@ class DeepLabv3(nn.Module):
 
         if n_classes != 21:
             self.deeplab.classifier[-1] = nn.Conv2d(256, n_classes, kernel_size=(1, 1), stride=(1, 1))
-            
+
             if  self.deeplab.aux_classifier != None:
                 self.deeplab.aux_classifier[-1] = nn.Conv2d(256, n_classes, kernel_size=(1, 1), stride=(1, 1))
 
@@ -398,7 +398,7 @@ class DeepLabv3(nn.Module):
 if __name__ == "__main__":
 
     image = torch.randn(4, 1, 512, 512)
-    model = DeepLabv3(n_channels=1, n_classes=3, resnet_type=101, pretrained=True)    
+    model = DeepLabv3(n_channels=1, n_classes=3, resnet_type=101, pretrained=True)
 
     output = model(image)
     print(output.size())

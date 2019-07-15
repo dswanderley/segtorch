@@ -66,7 +66,7 @@ target_class = example_list[example_index][1]
 file_name_to_export = img_path[img_path.rfind('/')+1:img_path.rfind('.')]
 # Read image
 original_image = Image.open(img_path).convert('L')
-numpy_image = np.array(original_image).astype(np.float32) 
+numpy_image = np.array(original_image).astype(np.float32)
 # Process image
 prep_img = preprocess_image(np.expand_dims(numpy_image, axis=2), resize_im=False)
 # Define model

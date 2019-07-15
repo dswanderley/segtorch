@@ -34,7 +34,7 @@ class FCN(nn.Module):
         else:
             mid_classes = n_classes
         # Maind body
-        if resnet_type == 50:    
+        if resnet_type == 50:
             self.fcn_body = fcn_resnet50(pretrained=False, num_classes=mid_classes)
             self.pretrained = False
         else:
@@ -42,7 +42,7 @@ class FCN(nn.Module):
 
         if n_classes != 21:
             self.fcn_body.classifier[-1] = nn.Conv2d(512, n_classes, kernel_size=(1, 1), stride=(1, 1))
-            
+
             if  self.fcn_body.aux_classifier != None:
                 self.fcn_body.aux_classifier[-1] = nn.Conv2d(512, n_classes, kernel_size=(1, 1), stride=(1, 1))
 
@@ -65,9 +65,9 @@ class FCN(nn.Module):
 
 
 if __name__ == "__main__":
-    
+
     image = torch.randn(4, 1, 512, 512)
     model = FCN(n_channels=1, n_classes=3, resnet_type=50, pretrained=True)
-    
+
     output = model(image)
     print(output.size())

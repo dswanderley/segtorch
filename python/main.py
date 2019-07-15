@@ -22,7 +22,6 @@ from torch import optim
 from utils.logger import Logger
 from nets.deeplab import DeepLabv3, DeepLabv3_plus
 from nets.unet import *
-from nets.dilation import *
 from nets.gcn import *
 from nets.fcn import *
 from nets.rcnn import *

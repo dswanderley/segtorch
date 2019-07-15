@@ -85,7 +85,7 @@ class OvaryDataset(Dataset):
     """
 
     def __init__(self, im_dir='im', gt_dir='gt',
-            one_hot=True, clahe=False, imap=False, 
+            one_hot=True, clahe=False, imap=False,
             ovary_inst=False, transform=None, out_tuple=False):
         """
         Args:
@@ -94,7 +94,7 @@ class OvaryDataset(Dataset):
                 the original images.
             one_hot (bool): Optional output encoding one-hot-encoding or gray levels.
             imap (bool, optional): Optional interactive maps.
-            ovary_inst(bool, optional): Define if ovary/stroma needs to be encoded 
+            ovary_inst(bool, optional): Define if ovary/stroma needs to be encoded
                 in the semantic instances.
             transform (callable, optional): Optional transform to be applied
                 on a sample.
@@ -264,7 +264,7 @@ class OvaryDataset(Dataset):
         if self.ovary_instance:
             mask_inst  = mask_inst + mask_ovary
             num_inst += 1
-        
+
         # Instance masks output
         if encods[3]:
             inst_mask = np.zeros((mask_inst.shape[0], mask_inst.shape[1], num_inst))
@@ -570,7 +570,7 @@ if __name__ == '__main__':
     # pre-set
     dataset = OvaryDataset(im_dir='../datasets/ovarian/im/test/',
                            gt_dir='../datasets/ovarian/gt/test/',
-                           imap=False, clahe=False, transform=False, 
+                           imap=False, clahe=False, transform=False,
                            ovary_inst=True,
                            out_tuple=True)
     # Loader

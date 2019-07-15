@@ -103,7 +103,7 @@ class Training:
                 loss = self.criterion(loss_dict)
             else:
                 pred_masks = self.model(image)
-            
+
                 # Handle multiples outputs
                 if type(pred_masks) is list:
                     prediction = pred_masks[0]

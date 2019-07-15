@@ -32,7 +32,7 @@ class GuidedBackprop():
             first_layer = list(self.model.features._modules.items())[0][1]
         else:
             first_layer = list(self.model._modules.items())[0][1]
-        
+
         first_layer.register_backward_hook(hook_function)
 
     def update_relus(self):

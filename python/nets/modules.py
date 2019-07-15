@@ -300,7 +300,7 @@ class GlobalAvgPool(nn.Module):
 
     def forward(self, x):
         ''' Foward method '''
-        bs = x.shape[0] 
+        bs = x.shape[0]
         if x.shape[0] == 1:
             x = torch.cat((x, x), dim=0)
         x = self.conv(x)
@@ -395,7 +395,7 @@ class ASPP(nn.Module):
         x_cat = torch.cat(y, dim=1)
         # volumer reduction
         x_out = self.conv1(x_cat)
-        
+
         return x_out
 
 
