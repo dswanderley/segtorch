@@ -105,9 +105,9 @@ class Training:
             if self.train_with_targets:
                 loss_dict = self.model(image, targets[0])
                 loss = self.criterion(loss_dict)
+                prediction = torch.zeros(image.shape) # To develop a function to generate an image with masks
             else:
                 pred_masks = self.model(image)
-
                 # Handle multiples outputs
                 if type(pred_masks) is list:
                     prediction = pred_masks[0]
