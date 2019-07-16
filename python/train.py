@@ -10,6 +10,7 @@ Created on Wed Fev 08 00:40:00 2019
 import torch
 from torch.utils.data import DataLoader
 from utils.datasets import collate_fn_ov_list
+from nets.rcnn import get_semantic_segmentation
 
 class Training:
     """
@@ -174,6 +175,12 @@ class Training:
             # Prediction
             self.optimizer.zero_grad()
             pred = self.model(image)
+
+            # Handle output dictionary case
+            if self.train_with_targets:
+                pred = [get_semantic_segmentation(pred).to(self.device),
+                        pred]
+
             # Handle multiples outputs
             if type(pred) is list:
                 pred = pred[0]
