@@ -94,6 +94,14 @@ class Training:
                 # Get masks
                 for tgt_str in self.target:
                     targets.append([s[tgt_str] for s in sample])
+                    # Set to device
+                    for tgt_master in targets:
+                        for tgt in tgt_master:
+                            if type(tgt) is dict:
+                                for t_idx in tgt:
+                                    tgt[t_idx] = tgt[t_idx].to(self.device)
+                            else:
+                                tgt = tgt.to(self.device)
             else:                   # Dict output
                 # Load data
                 image = sample['image'].to(self.device)
@@ -107,7 +115,7 @@ class Training:
 
             # Run prediction
             if self.train_with_targets:
-                loss_dict = self.model(image, targets[0])
+                loss_dict = self.model(image.to(self.device), targets[0])
                 loss = self.train_loss(loss_dict)
                 prediction = torch.zeros(image.shape) # To develop a function to generate an image with masks
             else:
