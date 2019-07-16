@@ -16,7 +16,7 @@ class Training:
         Training classe
     """
 
-    def __init__(self, model, device, train_set, valid_set, opt, loss,
+    def __init__(self, model, device, train_set, valid_set, opt, train_loss, eval_loss=None,
                   target='gt_mask', loss_weights=None, train_name='net', logger=None,
                   arch='unet', train_with_targets=False):
         '''
@@ -27,7 +27,11 @@ class Training:
         self.dataset_train = train_set
         self.dataset_val = valid_set
         self.optimizer = opt
-        self.criterion = loss
+        self.train_loss = train_loss
+        if eval_loss != None:
+            self.eval_loss = eval_loss
+        else:
+            self.eval_loss = train_loss
         self.logger = logger
         self.train_name = train_name
         if type(target) == list:
@@ -104,7 +108,7 @@ class Training:
             # Run prediction
             if self.train_with_targets:
                 loss_dict = self.model(image, targets[0])
-                loss = self.criterion(loss_dict)
+                loss = self.train_loss(loss_dict)
                 prediction = torch.zeros(image.shape) # To develop a function to generate an image with masks
             else:
                 pred_masks = self.model(image)
@@ -113,12 +117,12 @@ class Training:
                     prediction = pred_masks[0]
                     losses = []
                     for k in range(len(pred_masks)):
-                        losses.append(self.criterion(pred_masks[k], targets[k]) * self.loss_weights[k])
+                        losses.append(self.train_loss(pred_masks[k], targets[k]) * self.loss_weights[k])
                     loss = sum(losses)
                 else:
                     prediction = pred_masks
                     # Calculate loss for each batch
-                    loss = self.criterion(pred_masks, targets[0])
+                    loss = self.train_loss(pred_masks, targets[0])
 
             # Update epoch loss
             loss_train_sum += len(image) * loss.item()
@@ -167,7 +171,7 @@ class Training:
                 pred = pred[0]
 
             # Calculate loss for each batch
-            val_loss = self.criterion(pred, gt_mask)
+            val_loss = self.eval_loss(pred, gt_mask)
             loss_val_sum += len(image) * val_loss.item()
 
             # Print output preview
@@ -252,7 +256,7 @@ class Training:
                             'n_classes': ref_pred_train.shape[0],
                             'state_dict': self.model.state_dict(),
                             'target': self.target,
-                            'loss_function': str(self.criterion),
+                            'loss_function': str(self.train_loss),
                             'loss_weights': self.loss_weights,
                             'best_loss': best_loss,
                             'optimizer': str(self.optimizer),

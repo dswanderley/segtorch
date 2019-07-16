@@ -246,13 +246,16 @@ if __name__ == '__main__':
     else:
         loss_function = nn.CrossEntropyLoss()
         train_name += '_entp'
+    # Validation loss
+    val_loss = DiceLoss()
 
     # Set logs folder
     logger = Logger('../logs/' + train_name + '/')
 
     # Run training
     training = Training(model, device, dataset_train, dataset_val,
-                        optmizer, loss_function, target=target,
+                        optmizer, loss_function,
+                        eval_loss=val_loss, target=target,
                         train_with_targets = train_with_targets,
                         logger=logger, train_name=train_name, arch=net_type)
     training.train(epochs=n_epochs, batch_size=batch_size)
