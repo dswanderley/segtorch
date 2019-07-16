@@ -10,8 +10,51 @@ Created on Thu Jun 13 18:30:06 2019
 
 import torch
 import torch.nn as nn
+import torch.distributed as dist
+
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, maskrcnn_resnet50_fpn
 from nets.modules import *
+
+
+def is_dist_avail_and_initialized():
+    if not dist.is_available():
+        return False
+    if not dist.is_initialized():
+        return False
+    return True
+
+
+def get_world_size():
+    if not is_dist_avail_and_initialized():
+        return 1
+    return dist.get_world_size()
+
+
+def reduce_dict(input_dict, average=True):
+    """
+    Args:
+        input_dict (dict): all the values will be reduced
+        average (bool): whether to do average or sum
+    Reduce the values in the dictionary from all processes so that all processes
+    have the averaged results. Returns a dict with the same fields as
+    input_dict, after reduction.
+    """
+    world_size = get_world_size()
+    if world_size < 2:
+        return input_dict
+    with torch.no_grad():
+        names = []
+        values = []
+        # sort the keys so that they are consistent across processes
+        for k in sorted(input_dict.keys()):
+            names.append(k)
+            values.append(input_dict[k])
+        values = torch.stack(values, dim=0)
+        dist.all_reduce(values)
+        if average:
+            values /= world_size
+        reduced_dict = {k: v for k, v in zip(names, values)}
+    return reduced_dict
 
 
 class FasterRCNN(nn.Module):
@@ -106,21 +149,19 @@ class MaskRCNN(nn.Module):
         '''
         Calculate output segmentation given list of dictionaries with masks and labels.
         '''
-        x_out = []
+        bs = len(x)
+        _, _, h, w = x[0]['masks'].shape
+        x_out = torch.zeros(1, self.n_classes, h, w)
+        # Run batch
         for el in x:
-            insts, _, h, w = el['masks'].shape
-            x_temp = torch.zeros(1, self.n_classes, h, w)
-            #
+            # Run instances
             for lbl, mask in zip(el['labels'], el['masks']):
                 idx = lbl.item()
-                x_temp[:,idx,...] = x_temp[:,idx,...] + mask
-            x_temp[:,0,...] = torch.ones(1, 1, h, w) - x_temp[:,1,...] - x_temp[:,2,...]
-            # Threshold from 0 to 1
-            x_temp = torch.clamp(x_temp, 0., 1.)
-            # Add to output
-            x_out.append(x_temp)
+                x_out[:,idx,...] = x_out[:,idx,...] + mask
+        # Remove overlap region
+        #x_out[:,1,...] = x_out[:,1,...] - x_out[:,2,...]
 
-        return x_out
+        return torch.clamp(x_out, 0., 1.)
 
     def forward(self, x, tgts=None):
         if self.inconv != None:
@@ -131,51 +172,15 @@ class MaskRCNN(nn.Module):
             x_out = self.body(x,tgts)
         else:
             x_out = self.body(x,tgts)
+        # Output with softmax
         if self.softmax != None:
             x_out = self.softmax(x_out)
-        return x_out
-
-
-import torch.distributed as dist
-
-def is_dist_avail_and_initialized():
-    if not dist.is_available():
-        return False
-    if not dist.is_initialized():
-        return False
-    return True
-
-def get_world_size():
-    if not is_dist_avail_and_initialized():
-        return 1
-    return dist.get_world_size()
-
-
-def reduce_dict(input_dict, average=True):
-    """
-    Args:
-        input_dict (dict): all the values will be reduced
-        average (bool): whether to do average or sum
-    Reduce the values in the dictionary from all processes so that all processes
-    have the averaged results. Returns a dict with the same fields as
-    input_dict, after reduction.
-    """
-    world_size = get_world_size()
-    if world_size < 2:
-        return input_dict
-    with torch.no_grad():
-        names = []
-        values = []
-        # sort the keys so that they are consistent across processes
-        for k in sorted(input_dict.keys()):
-            names.append(k)
-            values.append(input_dict[k])
-        values = torch.stack(values, dim=0)
-        dist.all_reduce(values)
-        if average:
-            values /= world_size
-        reduced_dict = {k: v for k, v in zip(names, values)}
-    return reduced_dict
+        # Output train x eval
+        if self.body.training:
+            return x_out
+        else:
+            return [self.get_output_segmentation(x_out),
+                    x_out]
 
 
 if __name__ == "__main__":
@@ -184,7 +189,6 @@ if __name__ == "__main__":
 
     # https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html#putting-everything-together
     # https://github.com/pytorch/vision/blob/master/references/detection/train.py
-
 
     # Images
     images = torch.randn(2, 1, 512, 512)
@@ -208,8 +212,8 @@ if __name__ == "__main__":
     model = MaskRCNN(n_channels=1, n_classes=3, pretrained=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    #model.eval()
-    model.train()
+    model.eval()
+    #model.train()
 
     # output
     loss_dict = model(images, targets)
@@ -233,8 +237,5 @@ if __name__ == "__main__":
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
-
-    else:
-        model.get_output_segmentation(loss_dict)
 
     print(loss_dict)
