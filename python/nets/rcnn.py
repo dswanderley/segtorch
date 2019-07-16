@@ -57,6 +57,33 @@ def reduce_dict(input_dict, average=True):
     return reduced_dict
 
 
+def get_semantic_segmentation(x):
+    '''
+    Calculate output segmentation given list of dictionaries with masks and labels.
+    '''
+    bs = len(x)
+    _, _, h, w = x[0]['masks'].shape
+    n_classes = 2
+    for el in x:
+        if el['labels'].max().item() + 1 > n_classes:
+            n_classes = el['labels'].max().item() + 1
+    # Inicialize tensor with zeros
+    x_out = torch.zeros(bs, n_classes, h, w)
+
+    # Run batch
+    for i in range(bs):
+        el = x[i]
+        # Run instances
+        for lbl, mask in zip(el['labels'], el['masks']):
+            idx = lbl.item()
+            x_out[i,idx,...] = x_out[i,idx,...] + mask.cpu()
+
+    # Remove overlap region
+    #x_out[:,1,...] = x_out[:,1,...] - x_out[:,2,...]
+
+    return torch.clamp(x_out, 0., 1.)
+
+
 class FasterRCNN(nn.Module):
     '''
     Faster R-CNN Class
@@ -145,24 +172,6 @@ class MaskRCNN(nn.Module):
         else:
             self.softmax = None
 
-    def get_output_segmentation(self, x):
-        '''
-        Calculate output segmentation given list of dictionaries with masks and labels.
-        '''
-        bs = len(x)
-        _, _, h, w = x[0]['masks'].shape
-        x_out = torch.zeros(1, self.n_classes, h, w)
-        # Run batch
-        for el in x:
-            # Run instances
-            for lbl, mask in zip(el['labels'], el['masks']):
-                idx = lbl.item()
-                x_out[:,idx,...] = x_out[:,idx,...] + mask
-        # Remove overlap region
-        #x_out[:,1,...] = x_out[:,1,...] - x_out[:,2,...]
-
-        return torch.clamp(x_out, 0., 1.)
-
     def forward(self, x, tgts=None):
         if self.inconv != None:
             x = self.inconv(x)
@@ -175,18 +184,17 @@ class MaskRCNN(nn.Module):
         # Output with softmax
         if self.softmax != None:
             x_out = self.softmax(x_out)
-        # Output train x eval
-        if self.body.training:
-            return x_out
-        else:
-            return [self.get_output_segmentation(x_out),
-                    x_out]
+        # Output
+        return x_out
 
 
 if __name__ == "__main__":
 
     import math
 
+    # Load CUDA if exist
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
     # https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html#putting-everything-together
     # https://github.com/pytorch/vision/blob/master/references/detection/train.py
 
@@ -200,23 +208,23 @@ if __name__ == "__main__":
     mask[1, 200:250, 200:250] = 1
     # targets per image
     tgts = {
-        'boxes':  bbox,
-        'labels': lbls,
-        'masks': mask
+        'boxes':  bbox.to(device),
+        'labels': lbls.to(device),
+        'masks': mask.to(device)
     }
     # targets to list (by batch)
     targets = [tgts, tgts]
     #images = list(image for image in images)
 
     # Model
-    model = MaskRCNN(n_channels=1, n_classes=3, pretrained=True)
+    model = MaskRCNN(n_channels=1, n_classes=3, pretrained=True).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     model.eval()
     #model.train()
 
     # output
-    loss_dict = model(images, targets)
+    loss_dict = model(images.to(device), targets)
 
     if model.training:
         # multi-task loss
@@ -237,5 +245,8 @@ if __name__ == "__main__":
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
+
+    else:
+        x_out = get_semantic_segmentation(loss_dict).to(device)
 
     print(loss_dict)
