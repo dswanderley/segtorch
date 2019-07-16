@@ -90,7 +90,7 @@ class Training:
                 # Get images
                 image = torch.zeros(bs, ch, h, w)
                 for i in range(bs):
-                    image[i] = sample[i]['image']
+                    image[i] = sample[i]['image'].to(self.device)
                 # Get masks
                 for tgt_str in self.target:
                     targets.append([s[tgt_str] for s in sample])
