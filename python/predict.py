@@ -76,42 +76,42 @@ class Inference():
         if 'epoch' in self.state:
             table_s.append([
                 'Best Val Epoch',
-                inference.state['epoch']
+                self.state['epoch']
             ])
         if 'best_loss'in self.state:
             table_s.append([
                 'Best Val Loss',
-                inference.state['best_loss']
+                self.state['best_loss']
             ])
         if 'arch'in self.state:
             table_s.append([
                 'Architecture',
-                inference.state['arch']
+                self.state['arch']
             ])
         if 'n_input'in self.state:
             table_s.append([
                 'Input channels',
-                inference.state['n_input']
+                self.state['n_input']
             ])
         if 'target'in self.state:
             table_s.append([
                 'Main task',
-                inference.state['target']
+                self.state['target']
             ])
         if 'loss_function'in self.state:
             table_s.append([
                 'Loss function',
-                inference.state['loss_function']
+                self.state['loss_function']
             ])
         if 'loss_weights'in self.state:
             table_s.append([
                 'Loss function weights',
-                inference.state['loss_weights']
+                self.state['loss_weights']
             ])
         if 'device'in self.state:
             table_s.append([
                 'Device',
-                inference.state['device']
+                self.state['device']
             ])
 
         # Save states
