@@ -167,6 +167,7 @@ class Training:
             # Load data
             image = sample['image'].to(self.device)
             gt_mask = sample['gt_mask'].to(self.device)
+            n_classes = gt_mask.shape[1]
 
             # Handle input
             if len(image.size()) < 4:
@@ -178,7 +179,7 @@ class Training:
 
             # Handle output dictionary case
             if self.train_with_targets:
-                pred = [get_semantic_segmentation(pred).to(self.device),
+                pred = [get_semantic_segmentation(pred, n_classes).to(self.device),
                         pred]
 
             # Handle multiples outputs

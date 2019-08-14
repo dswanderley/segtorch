@@ -57,16 +57,13 @@ def reduce_dict(input_dict, average=True):
     return reduced_dict
 
 
-def get_semantic_segmentation(x):
+def get_semantic_segmentation(x, n_classes):
     '''
     Calculate output segmentation given list of dictionaries with masks and labels.
     '''
     bs = len(x)
     _, _, h, w = x[0]['masks'].shape
-    n_classes = 2
-    for el in x:
-        if el['labels'].max().item() + 1 > n_classes:
-            n_classes = el['labels'].max().item() + 1
+
     # Inicialize tensor with zeros
     x_out = torch.zeros(bs, n_classes, h, w)
 
