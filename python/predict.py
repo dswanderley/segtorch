@@ -20,6 +20,7 @@ from nets.deeplab import DeepLabv3, DeepLabv3_plus
 from nets.unet import *
 from nets.gcn import *
 from nets.fcn import *
+from nets.rcnn import *
 from utils.datasets import OvaryDataset
 from utils.losses import DiceCoefficients
 
@@ -29,7 +30,8 @@ class Inference():
         Inferecen class
     """
 
-    def __init__(self, model, device, weights_path, batch_size=1, folder='../predictions/'):
+    def __init__(self, model, device, weights_path, batch_size=1,
+                target=['gt_mask','ovary_mask'], folder='../predictions/'):
         '''
             Inference class - Constructor
         '''
@@ -39,6 +41,10 @@ class Inference():
         self.batch_size = batch_size
         self._load_network()
         self.criterion = DiceCoefficients()
+        if type(target) == list:
+            self.target = target
+        else:
+            self.target = [target]
         self.pred_folder = folder + 'pred/'
         if not os.path.exists(self.pred_folder):
             os.makedirs(self.pred_folder)
@@ -136,13 +142,16 @@ class Inference():
         dsc_data.append(['name', 'backgound', 'stroma', 'follicles', 'ovary'])
 
         data_loader = DataLoader(images, batch_size=self.batch_size, shuffle=False)
+        # Read images
         for _, sample in enumerate(data_loader):
+
             # Load data
             image = sample['image'].to(self.device)
             gt_mask = sample['gt_mask'].to(self.device)
             im_name = sample['im_name']
             # ovary prediction (interim)
             ov_mask = sample['ovary_mask'].to(self.device)  # load mask
+
             # data size
             bs, n_classes, height, width =  gt_mask.shape
 
@@ -154,8 +163,17 @@ class Inference():
             pred = None
             with torch.no_grad():
                 pred = self.model(image)
+
+
+
             # Handle multiples outputs
             if type(pred) is list:
+
+                if type(pred[0]) is dict:
+                    pred_dtct = [get_semantic_segmentation(pred, n_classes).to(self.device),
+                                pred]
+                    pred = pred_dtct
+                # Main pred
                 pred = pred[0]
 
             pred_max, pred_idx = pred.max(dim=1)
@@ -217,7 +235,8 @@ if __name__ == '__main__':
                                 'deeplabv3', 'deeplabv3_r50', 'deeplabv3p', 'deeplabv3p_r50',
                                  'unet', 'unet_light', 'unet2', 'd_unet2',
                                  'sp_unet', 'sp_unet2',
-                                 'gcn', 'gcn2', 'b_gcn', 'u_gcn'],
+                                 'gcn', 'gcn2', 'b_gcn', 'u_gcn',
+                                 'mask_rcnn'],
                         help='network name (default: unet2)')
     parser.add_argument('--train_name', type=str, default='20190428_1133_unet2',
                         help='training name (default: 20190428_1133_unet2)')
@@ -243,8 +262,15 @@ if __name__ == '__main__':
     n_classes=3
 
     bilinear = False
-     # Load Network model
-    if net_type == 'fcn_r101':
+    # Load Network model
+    if net_type == 'mask_rcnn':
+        n_classes = 3
+        target = 'targets'
+        loss = 'multitaskdict'
+        train_with_targets = True
+        model = MaskRCNN(n_channels=in_channels, n_classes=n_classes, pretrained=True)
+    # FCN models
+    elif net_type == 'fcn_r101':
         model = FCN(n_channels=in_channels, n_classes=n_classes, resnet_type=101)
     elif net_type == 'fcn_r50':
         model = FCN(n_channels=in_channels, n_classes=n_classes, resnet_type=50)
