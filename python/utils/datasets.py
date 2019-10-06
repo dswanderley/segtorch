@@ -287,7 +287,7 @@ class OvaryDataset(Dataset):
                 labels.append(1)
             else:
                 labels.append(2)
-            slice_x, slice_y = ndi.find_objects(mask_inst==i+1)[0]
+            slice_y, slice_x = ndi.find_objects(mask_inst==i+1)[0]
             box = [float(slice_x.start), float(slice_y.start),
                    float(slice_x.stop),  float(slice_y.stop)]
             boxes.append(box)
